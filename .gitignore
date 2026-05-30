@@ -1,0 +1,17 @@
+# Python-generated files
+__pycache__/
+*.py[oc]
+build/
+dist/
+wheels/
+*.egg-info
+
+# Virtual environments
+.venv
+.vscode
+.env
+
+# temp
+src/preproc/devide_per_school.py
+src/preproc/menu_similarity_per_school.py
+src/index.html

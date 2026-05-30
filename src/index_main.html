@@ -1,0 +1,743 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>급식 식단 분석 · 달력</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;700&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#f4f6fb;--bg2:#ffffff;--bg3:#f0f2f8;--surface:#e8ebf4;
+  --border:rgba(60,80,140,.1);--border2:rgba(60,80,140,.18);
+  --text:#1a1d2e;--text2:#5a6080;--text3:#9298b8;
+  --accent:#3b7ef4;--purple:#7c3aed;--teal:#0d9488;
+  --red:#dc2626;--red-bg:rgba(220,38,38,.08);--red-bd:rgba(220,38,38,.28);
+  --orange:#ea6c00;--orange-bg:rgba(234,108,0,.09);--orange-bd:rgba(234,108,0,.3);
+  --green:#059669;--green-bg:rgba(5,150,105,.08);--green-bd:rgba(5,150,105,.28);
+  --amber:#d97706;--mono:"DM Mono",monospace;--sans:"Noto Sans KR",sans-serif;
+}
+body{font-family:var(--sans);background:var(--bg);color:var(--text);min-height:100vh;font-size:13px;line-height:1.5;overflow-x:hidden}
+.bg-grid{position:fixed;inset:0;pointer-events:none;z-index:0;
+  background-image:linear-gradient(rgba(59,126,244,.06) 1px,transparent 1px),linear-gradient(90deg,rgba(59,126,244,.06) 1px,transparent 1px);
+  background-size:32px 32px}
+/* 헤더 */
+header{position:sticky;top:0;z-index:50;background:rgba(244,246,251,.92);backdrop-filter:blur(12px);border-bottom:1px solid var(--border)}
+.hdr{max-width:1380px;margin:0 auto;padding:0 20px;height:52px;display:flex;align-items:center;justify-content:space-between;gap:12px}
+.logo{display:flex;align-items:center;gap:9px;flex-shrink:0}
+.logo-ic{width:32px;height:32px;border-radius:8px;background:linear-gradient(135deg,var(--accent),var(--purple));display:flex;align-items:center;justify-content:center;font-size:16px}
+.logo-t{font-size:14px;font-weight:700}.logo-y{font-size:11px;color:var(--text3);font-family:var(--mono)}
+/* 업로드 */
+#upload-panel{position:relative;z-index:1;max-width:600px;margin:72px auto 0;padding:0 20px}
+.up-title{font-size:22px;font-weight:700;text-align:center;margin-bottom:8px}
+.up-desc{color:var(--text2);text-align:center;margin-bottom:28px;font-size:13px;line-height:1.7}
+.drop-box{border:1.5px dashed var(--border2);border-radius:14px;padding:36px 24px;text-align:center;cursor:pointer;background:var(--bg2);transition:all .2s;user-select:none;position:relative;overflow:hidden}
+.drop-box::before{content:'';position:absolute;inset:0;background:radial-gradient(circle at 50% 0%,rgba(79,142,247,.05),transparent 60%);opacity:0;transition:opacity .3s}
+.drop-box:hover,.drop-box.over{border-color:var(--accent);background:var(--bg3)}
+.drop-box:hover::before,.drop-box.over::before{opacity:1}
+.drop-box.done{border-color:var(--green);border-style:solid}
+.db-icon{font-size:32px;margin-bottom:10px}
+.db-title{font-size:14px;font-weight:700;margin-bottom:4px}
+.db-hint{font-size:11px;color:var(--text3);font-family:var(--mono)}
+.db-name{font-size:11px;color:var(--green);margin-top:6px;font-family:var(--mono);display:none}
+.up-btn{margin-top:16px;width:100%;padding:12px;background:linear-gradient(135deg,var(--accent),var(--purple));border:none;border-radius:10px;color:#fff;font-size:14px;font-weight:700;font-family:var(--sans);cursor:pointer;transition:opacity .2s}
+.up-btn:hover{opacity:.88}
+.up-btn:disabled{opacity:.35;cursor:not-allowed}
+/* 진행 오버레이 */
+#progress-overlay{display:none;position:fixed;inset:0;z-index:300;background:rgba(200,210,230,.7);backdrop-filter:blur(8px);align-items:center;justify-content:center;flex-direction:column;gap:16px}
+#progress-overlay.open{display:flex}
+.prog-box{background:var(--bg2);border:1px solid var(--border2);border-radius:16px;padding:32px 40px;text-align:center;min-width:320px}
+.prog-title{font-size:16px;font-weight:700;margin-bottom:8px}
+.prog-msg{font-size:13px;color:var(--text2);margin-bottom:20px;min-height:20px}
+.prog-bar-wrap{height:6px;background:var(--bg3);border-radius:99px;overflow:hidden}
+.prog-bar{height:100%;background:linear-gradient(90deg,var(--accent),var(--purple));border-radius:99px;transition:width .4s ease;width:0%}
+/* 메인 */
+#main{display:none;position:relative;z-index:1;max-width:1380px;margin:0 auto;padding:14px 20px 60px}
+.top-bar{display:flex;align-items:center;gap:8px;margin-bottom:12px;flex-wrap:wrap}
+.sel{appearance:none;background:var(--bg2);color:var(--text);border:1px solid var(--border2);border-radius:8px;padding:7px 28px 7px 11px;font-family:var(--sans);font-size:12px;font-weight:500;cursor:pointer;outline:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%235a5e72'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 9px center;transition:border-color .2s}
+.sel:hover,.sel:focus{border-color:var(--accent)}
+.nav-btn{background:var(--bg2);border:1px solid var(--border2);border-radius:8px;color:var(--text2);padding:7px 14px;font-size:13px;cursor:pointer;transition:all .15s;font-family:var(--sans);font-weight:500}
+.nav-btn:hover{border-color:var(--accent);color:var(--text)}
+.month-lbl{font-size:16px;font-weight:700;font-family:var(--mono);min-width:110px;text-align:center}
+.legend{display:flex;align-items:center;gap:14px;flex-wrap:wrap;margin-left:auto}
+.leg-item{display:flex;align-items:center;gap:5px;font-size:11px;color:var(--text2)}
+.leg-dot{width:9px;height:9px;border-radius:3px;flex-shrink:0}
+/* 파라미터 바 */
+.param-bar{display:flex;align-items:center;gap:16px;margin-bottom:14px;background:var(--bg2);border:1px solid var(--border);border-radius:10px;padding:10px 16px;flex-wrap:wrap}
+.param-group{display:flex;align-items:center;gap:8px;font-size:12px}
+.param-label{color:var(--text3);white-space:nowrap}
+.param-input{background:var(--bg3);color:var(--text);border:1px solid var(--border2);border-radius:6px;padding:4px 8px;font-family:var(--mono);font-size:12px;width:60px;outline:none;text-align:center}
+.param-input:focus{border-color:var(--accent)}
+.rerun-btn{margin-left:auto;background:linear-gradient(135deg,var(--accent),var(--purple));border:none;border-radius:7px;color:#fff;padding:6px 14px;font-size:12px;font-weight:700;font-family:var(--sans);cursor:pointer;transition:opacity .2s;white-space:nowrap}
+.rerun-btn:hover{opacity:.85}
+/* 패널 */
+.panels{display:grid;grid-template-columns:1fr 300px;gap:14px;align-items:start}
+@media(max-width:900px){.panels{grid-template-columns:1fr}}
+/* 달력 */
+.cal-wrap{background:var(--bg2);border:1px solid var(--border);border-radius:14px;overflow:hidden}
+.cal-head{display:grid;grid-template-columns:repeat(7,1fr);background:var(--bg3);border-bottom:1px solid var(--border)}
+.cal-hcell{padding:8px 4px;text-align:center;font-size:10.5px;font-weight:700;color:var(--text3);letter-spacing:.04em}
+.cal-hcell:first-child{color:#dc2626}.cal-hcell:last-child{color:#7c3aed}
+.cal-grid{display:grid;grid-template-columns:repeat(7,1fr)}
+.cc{min-height:90px;border-right:1px solid var(--border);border-bottom:1px solid var(--border);padding:5px 4px;transition:background .12s}
+.cc:nth-child(7n){border-right:none}
+.cc.other{opacity:.28}.cc.hol .dnum{color:#dc2626}.cc.sat .dnum{color:#7c3aed}
+.cc.clickable{cursor:pointer}.cc.clickable:hover{background:var(--bg3)}
+.cc.sel{background:rgba(79,142,247,.09)!important;outline:2px solid var(--accent);outline-offset:-2px}
+.cc.r1{background:var(--red-bg)!important;outline:1.5px solid var(--red-bd);outline-offset:-1.5px}
+.cc.r1:hover{background:rgba(239,68,68,.19)!important}
+.cc.r2{background:var(--orange-bg)!important;outline:1.5px solid var(--orange-bd);outline-offset:-1.5px}
+.cc.r2:hover{background:rgba(249,115,22,.19)!important}
+.cc.r1 .dnum,.cc.r2 .dnum{color:var(--text)}
+.dnum{font-size:11px;font-weight:700;color:var(--text3);margin-bottom:3px;font-family:var(--mono);display:flex;align-items:center;gap:3px}
+.today-d{width:5px;height:5px;border-radius:50%;background:var(--accent);display:inline-block}
+.swap-bdg{display:inline-flex;align-items:center;font-size:9px;font-weight:700;padding:2px 5px;border-radius:4px;margin-bottom:2px;font-family:var(--mono)}
+.swap-bdg.r1{background:var(--red-bg);color:var(--red);border:1px solid var(--red-bd)}
+.swap-bdg.r2{background:var(--orange-bg);color:var(--orange);border:1px solid var(--orange-bd)}
+.chips{display:flex;flex-wrap:wrap;gap:2px}
+.chip{font-size:9px;color:var(--text3);background:var(--bg3);border-radius:3px;padding:1px 4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%}
+.chip.main{color:var(--text2)}
+/* 사이드 */
+.side{display:flex;flex-direction:column;gap:10px;position:sticky;top:66px}
+.scard{background:var(--bg2);border:1px solid var(--border);border-radius:12px;overflow:hidden}
+.scard-h{padding:11px 14px 9px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between}
+.scard-t{font-size:12px;font-weight:700}
+.scard-b{padding:12px 14px}
+.no-data{color:var(--text3);font-size:12px;text-align:center;padding:18px 0}
+.menu-row{display:flex;align-items:center;gap:7px;padding:5px 7px;background:var(--bg3);border-radius:6px;font-size:12px;margin-bottom:3px}
+.menu-row:last-child{margin-bottom:0}
+.menu-dot2{width:4px;height:4px;border-radius:50%;background:var(--text3);flex-shrink:0}
+.swap-item{border-radius:8px;padding:9px 11px;border:1px solid;cursor:pointer;transition:filter .15s;margin-bottom:6px}
+.swap-item:last-child{margin-bottom:0}
+.swap-item:hover{filter:brightness(1.12)}
+.swap-item.r1{background:var(--red-bg);border-color:var(--red-bd)}
+.swap-item.r2{background:var(--orange-bg);border-color:var(--orange-bd)}
+.si-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:4px}
+.si-rank{font-size:9px;font-weight:700;padding:2px 6px;border-radius:99px;font-family:var(--mono)}
+.si-rank.r1{background:var(--red);color:#fff}.si-rank.r2{background:var(--orange);color:#fff}
+.si-dates{font-size:12px;font-weight:700;font-family:var(--mono);color:var(--text)}
+.si-scores{display:flex;gap:8px;font-size:10px;color:var(--text3)}
+.si-v{font-family:var(--mono)}
+/* 모달 */
+#mo{display:none;position:fixed;inset:0;z-index:200;background:rgba(180,190,220,.6);backdrop-filter:blur(8px);align-items:center;justify-content:center;padding:20px}
+#mo.open{display:flex}
+.modal{background:var(--bg2);border:1px solid var(--border2);border-radius:18px;width:100%;max-width:500px;max-height:88vh;overflow-y:auto;animation:mIn .22s cubic-bezier(.34,1.56,.64,1)}
+@keyframes mIn{from{opacity:0;transform:scale(.93) translateY(14px)}to{opacity:1;transform:scale(1) translateY(0)}}
+.mh{padding:18px 20px 14px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:flex-start}
+.mt{font-size:15px;font-weight:700}.ms{font-size:11px;color:var(--text3);margin-top:3px}
+.mx{width:28px;height:28px;background:var(--bg3);border:1px solid var(--border);border-radius:7px;color:var(--text2);display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:14px;flex-shrink:0;transition:all .15s}
+.mx:hover{color:var(--text)}
+.mb{padding:18px 20px 22px}
+.msect{font-size:10px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.06em;margin:14px 0 7px}
+.msect:first-child{margin-top:0}
+.sg{display:grid;grid-template-columns:repeat(4,1fr);gap:7px}
+.sb{background:var(--bg3);border-radius:8px;padding:9px 6px;text-align:center}
+.sbv{font-family:var(--mono);font-size:17px;font-weight:500}.sbl{font-size:9.5px;color:var(--text3);margin-top:2px}
+.formula{background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:10px 12px;font-family:var(--mono);font-size:11.5px;color:var(--text2);line-height:2}
+.formula .a{color:var(--accent)}.formula .g{color:var(--green)}.formula .o{color:var(--amber)}
+.cg{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.cc2{background:var(--bg3);border-radius:8px;padding:10px 12px}
+.ch{font-size:10px;font-weight:700;margin-bottom:5px;display:flex;align-items:center;gap:4px}
+.cd{font-family:var(--mono);font-size:12px;color:var(--text);margin-bottom:5px}
+.m-tag{display:inline-block;font-size:11px;background:var(--surface);border:1px solid var(--border);border-radius:5px;padding:3px 6px;margin:2px 2px 2px 0;color:var(--text2)}
+::-webkit-scrollbar{width:5px;height:5px}
+::-webkit-scrollbar-track{background:var(--bg3)}
+::-webkit-scrollbar-thumb{background:var(--surface);border-radius:99px}
+</style>
+</head>
+<body>
+<div class="bg-grid"></div>
+<header>
+  <div class="hdr">
+    <div class="logo">
+      <div class="logo-ic">🍱</div>
+      <div><div class="logo-t">급식 식단 분석 · 달력</div></div>
+    </div>
+    <div class="logo-y">충청북도 초등학교 · 2025 · Pyodide</div>
+  </div>
+</header>
+
+<!-- 업로드 -->
+<div id="upload-panel">
+  <div class="up-title">🥗 식단 데이터 업로드</div>
+  <div class="up-desc">
+    <code style="font-family:var(--mono);font-size:12px;background:var(--bg3);padding:2px 7px;border-radius:4px">menu_preproc.csv</code>
+    파일 하나만 업로드하면<br>
+    Python 분석부터 달력 표시까지 자동으로 실행됩니다
+  </div>
+  <div class="drop-box" id="db-menu" onclick="document.getElementById('fi-menu').click()">
+    <div class="db-icon">📂</div>
+    <div class="db-title">여기에 파일을 드래그하거나 클릭해서 선택</div>
+    <div class="db-hint">menu_preproc.csv</div>
+    <div class="db-name" id="nm-menu"></div>
+  </div>
+  <input type="file" id="fi-menu" accept=".csv" style="display:none">
+  <button class="up-btn" id="start-btn" disabled onclick="runAnalysis()">🔬 Python 분석 실행 →</button>
+</div>
+
+<!-- 진행 오버레이 -->
+<div id="progress-overlay">
+  <div class="prog-box">
+    <div class="prog-title">⚙️ Python 분석 실행 중</div>
+    <div class="prog-msg" id="prog-msg">초기화 중...</div>
+    <div class="prog-bar-wrap"><div class="prog-bar" id="prog-bar"></div></div>
+  </div>
+</div>
+
+<!-- 메인 -->
+<div id="main">
+  <!-- 파라미터 바 -->
+  <div class="param-bar">
+    <div class="param-group">
+      <span class="param-label">반복 기준 횟수</span>
+      <input class="param-input" id="p-repeat" type="number" value="5" min="1" max="20">
+    </div>
+    <div class="param-group">
+      <span class="param-label">baseline 배율</span>
+      <input class="param-input" id="p-mult" type="number" value="1.5" min="1" max="5" step="0.1">
+    </div>
+    <div class="param-group">
+      <span class="param-label">α (다양성)</span>
+      <input class="param-input" id="p-alpha" type="number" value="0.5" min="0" max="1" step="0.1">
+    </div>
+    <div class="param-group">
+      <span class="param-label">β (영양)</span>
+      <input class="param-input" id="p-beta" type="number" value="0.5" min="0" max="1" step="0.1">
+    </div>
+    <div class="param-group">
+      <span class="param-label">학교당 추천 수</span>
+      <input class="param-input" id="p-topk" type="number" value="5" min="1" max="20">
+    </div>
+    <button class="rerun-btn" onclick="rerun()">🔄 재분석</button>
+  </div>
+
+  <div class="top-bar">
+    <button class="nav-btn" onclick="shiftMonth(-1)">‹ 이전</button>
+    <div class="month-lbl" id="mlbl">2025 / 12</div>
+    <button class="nav-btn" onclick="shiftMonth(1)">다음 ›</button>
+    <select class="sel" id="school-sel" onchange="onSchoolChange()"></select>
+    <div class="legend">
+      <div class="leg-item"><div class="leg-dot" style="background:var(--red);border:1px solid var(--red-bd)"></div>1순위</div>
+      <div class="leg-item"><div class="leg-dot" style="background:var(--orange);border:1px solid var(--orange-bd)"></div>2순위</div>
+      <div class="leg-item"><div class="leg-dot" style="background:var(--bg3);border:1px solid var(--border2)"></div>급식일</div>
+    </div>
+  </div>
+
+  <div class="panels">
+    <div>
+      <div class="cal-wrap">
+        <div class="cal-head">
+          <div class="cal-hcell">일</div><div class="cal-hcell">월</div><div class="cal-hcell">화</div>
+          <div class="cal-hcell">수</div><div class="cal-hcell">목</div><div class="cal-hcell">금</div><div class="cal-hcell">토</div>
+        </div>
+        <div class="cal-grid" id="cal-grid"></div>
+      </div>
+    </div>
+    <div class="side">
+      <div class="scard">
+        <div class="scard-h">
+          <div class="scard-t">🍽 선택일 메뉴</div>
+          <div style="font-size:10px;color:var(--text3)" id="sel-lbl">날짜 클릭</div>
+        </div>
+        <div class="scard-b"><div id="side-menu"><div class="no-data">달력에서 날짜를 클릭하세요</div></div></div>
+      </div>
+      <div class="scard">
+        <div class="scard-h">
+          <div class="scard-t">🔄 이달 교환 추천</div>
+          <div style="font-size:10px;color:var(--text3)" id="swap-cnt">—</div>
+        </div>
+        <div class="scard-b"><div id="side-swap"><div class="no-data">—</div></div></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- 모달 -->
+<div id="mo">
+  <div class="modal">
+    <div class="mh">
+      <div><div class="mt" id="m-title"></div><div class="ms" id="m-sub"></div></div>
+      <div class="mx" onclick="closeMo()">✕</div>
+    </div>
+    <div class="mb" id="m-body"></div>
+  </div>
+</div>
+
+<!-- Pyodide -->
+<script src="https://cdn.jsdelivr.net/pyodide/v0.26.4/full/pyodide.js"></script>
+<script>
+// ═══════════════════════════════════════════════
+// 상태
+// ═══════════════════════════════════════════════
+let pyodide = null;
+let csvText = null;
+let menuData = {}, swapData = {}, schools = [];
+let curSchool = '', curY = 2025, curM = 12, selDate = null;
+
+// ═══════════════════════════════════════════════
+// Pyodide 초기화 (백그라운드에서 미리 로드)
+// ═══════════════════════════════════════════════
+async function initPyodide() {
+  try {
+    pyodide = await loadPyodide();
+    await pyodide.loadPackage(['pandas', 'numpy', 'scikit-learn']);
+    console.log('Pyodide 로드 완료');
+  } catch(e) {
+    console.error('Pyodide 로드 실패:', e);
+  }
+}
+initPyodide(); // 페이지 로드 시 미리 시작
+
+// ═══════════════════════════════════════════════
+// 파일 업로드
+// ═══════════════════════════════════════════════
+const dbMenu = document.getElementById('db-menu');
+dbMenu.addEventListener('dragover', e => { e.preventDefault(); dbMenu.classList.add('over'); });
+dbMenu.addEventListener('dragleave', () => dbMenu.classList.remove('over'));
+dbMenu.addEventListener('drop', e => {
+  e.preventDefault(); dbMenu.classList.remove('over');
+  if (e.dataTransfer.files[0]) loadCSV(e.dataTransfer.files[0]);
+});
+document.getElementById('fi-menu').addEventListener('change', e => {
+  if (e.target.files[0]) loadCSV(e.target.files[0]);
+});
+
+function loadCSV(file) {
+  const reader = new FileReader();
+  reader.onload = e => {
+    csvText = e.target.result;
+    const nm = document.getElementById('nm-menu');
+    nm.textContent = file.name; nm.style.display = 'block';
+    dbMenu.classList.add('done');
+    document.getElementById('start-btn').disabled = false;
+  };
+  reader.readAsText(file, 'utf-8');
+}
+
+// ═══════════════════════════════════════════════
+// 진행 표시
+// ═══════════════════════════════════════════════
+function setProgress(pct, msg) {
+  document.getElementById('prog-bar').style.width = pct + '%';
+  document.getElementById('prog-msg').textContent = msg;
+}
+function showProgress() { document.getElementById('progress-overlay').classList.add('open'); }
+function hideProgress() { document.getElementById('progress-overlay').classList.remove('open'); }
+
+// ═══════════════════════════════════════════════
+// Python 분석 실행
+// ═══════════════════════════════════════════════
+async function runAnalysis() {
+  if (!csvText) return;
+
+  showProgress();
+  setProgress(5, 'Pyodide 준비 중...');
+
+  // Pyodide 아직 로딩 중이면 대기
+  if (!pyodide) {
+    setProgress(10, 'Python 런타임 로딩 중... (최초 1회, 약 10-20초)');
+    pyodide = await loadPyodide();
+    await pyodide.loadPackage(['pandas', 'numpy', 'scikit-learn']);
+  }
+
+  setProgress(25, 'CSV 파싱 중...');
+
+  // CSV 텍스트를 Python으로 전달
+  pyodide.globals.set('csv_text', csvText);
+  pyodide.globals.set('repeat_threshold', parseFloat(document.getElementById('p-repeat').value) || 5);
+  pyodide.globals.set('baseline_mult',    parseFloat(document.getElementById('p-mult').value)   || 1.5);
+  pyodide.globals.set('alpha_val',        parseFloat(document.getElementById('p-alpha').value)   || 0.5);
+  pyodide.globals.set('beta_val',         parseFloat(document.getElementById('p-beta').value)    || 0.5);
+  pyodide.globals.set('top_k',            parseInt(document.getElementById('p-topk').value)      || 5);
+
+  setProgress(40, '데이터 전처리 중...');
+
+  try {
+    await pyodide.runPythonAsync(`
+import ast, math, json, warnings, re
+from collections import Counter
+from itertools import combinations
+from io import StringIO
+import numpy as np
+import pandas as pd
+from sklearn.feature_extraction.text import TfidfVectorizer
+from sklearn.metrics.pairwise import cosine_similarity
+from sklearn.preprocessing import StandardScaler
+warnings.filterwarnings('ignore')
+
+# ── 전처리 ──────────────────────────────────────────────────
+def clean_num(v):
+    if pd.isna(v): return None
+    m = re.search(r'[\\d.]+', str(v))
+    return float(m.group()) if m else None
+
+df = pd.read_csv(StringIO(csv_text))
+df['급식일자'] = df['급식일자'].astype(str).str.strip()
+df['month']   = df['급식일자'].str[4:6].astype(int)
+
+for col in ['칼로리정보','탄수화물(g)','단백질(g)','지방(g)','칼슘(mg)','철분(mg)']:
+    if col in df.columns:
+        df[col] = df[col].apply(clean_num)
+if '칼로리정보' in df.columns:
+    df.rename(columns={'칼로리정보':'칼로리_num'}, inplace=True)
+
+def parse_menu(raw):
+    try: return ast.literal_eval(str(raw))
+    except: return []
+
+df['menus']     = df['menu_list'].apply(parse_menu)
+df['menus']     = df['menus'].apply(lambda l: [str(m).strip() for m in l if str(m).strip()])
+df['menu_text'] = df['menus'].apply(lambda l: ', '.join(l))
+
+# ── Baseline (1~11월) ────────────────────────────────────────
+train   = df[df['month'] <= 11]
+ctr     = Counter()
+for m in train['menus']: ctr.update(m)
+n_months = train['month'].nunique() or 1
+baseline = {k: v / n_months for k, v in ctr.items()}
+
+# ── 반복 메뉴 탐지 (12월) ────────────────────────────────────
+dec     = df[df['month'] == 12]
+dctr    = Counter()
+for m in dec['menus']: dctr.update(m)
+
+repeated = set()
+for menu, cnt in dctr.items():
+    avg   = baseline.get(menu, 0)
+    ratio = (cnt / avg) if avg > 0 else float('inf')
+    if cnt >= repeat_threshold or ratio >= baseline_mult:
+        repeated.add(menu)
+
+# ── TF-IDF 임베딩 (전체) ─────────────────────────────────────
+NCOLS = [c for c in ['칼로리_num','탄수화물(g)','단백질(g)','지방(g)','칼슘(mg)','철분(mg)'] if c in df.columns]
+
+tfidf  = TfidfVectorizer(analyzer='char_wb', ngram_range=(2, 4), max_features=3000)
+all_emb = tfidf.fit_transform(df['menu_text'].tolist()).toarray()
+
+nut_raw    = df[NCOLS].fillna(0).values
+nut_scaled = StandardScaler().fit_transform(nut_raw) if nut_raw.shape[0] > 1 else nut_raw
+
+# ── 학교별 swap candidates ───────────────────────────────────
+all_results = []
+
+for school in df['학교명'].unique():
+    mask_dec = (df['학교명'] == school) & (df['month'] == 12)
+    df_sch   = df[mask_dec].copy().reset_index(drop=True)
+    if len(df_sch) < 2: continue
+
+    idx_list  = df.index[mask_dec].tolist()
+    emb_sch   = all_emb[idx_list]
+    nut_sch   = nut_scaled[idx_list]
+    msim      = cosine_similarity(emb_sch)
+    nsim      = cosine_similarity(nut_sch)
+
+    df_sch['rep_score'] = df_sch['menus'].apply(
+        lambda l: sum(1 for m in l if m in repeated)
+    )
+
+    pairs = []
+    for i, j in combinations(range(len(df_sch)), 2):
+        ri, rj = int(df_sch.iloc[i]['rep_score']), int(df_sch.iloc[j]['rep_score'])
+        gap = abs(ri - rj)
+        if gap == 0: continue
+        div = 1.0 - float(msim[i, j])
+        ns  = (float(nsim[i, j]) + 1) / 2
+        sc  = (alpha_val * div + beta_val * ns) * math.log1p(gap)
+        hi, lo = (i, j) if ri >= rj else (j, i)
+        pairs.append({
+            'school'  : school,
+            'date_hi' : str(df_sch.iloc[hi]['급식일자']),
+            'date_lo' : str(df_sch.iloc[lo]['급식일자']),
+            'rep_hi'  : int(df_sch.iloc[hi]['rep_score']),
+            'rep_lo'  : int(df_sch.iloc[lo]['rep_score']),
+            'rep_gap' : gap,
+            'menu_diversity': round(div, 4),
+            'nutrient_sim'  : round(ns,  4),
+            'swap_score'    : round(sc,  4),
+            'menus_hi': df_sch.iloc[hi]['menus'],
+            'menus_lo': df_sch.iloc[lo]['menus'],
+        })
+
+    pairs.sort(key=lambda x: -x['swap_score'])
+    for rank, p in enumerate(pairs[:top_k], 1):
+        p['rank'] = rank
+    all_results.extend(pairs[:top_k])
+
+# ── 달력용 menu_map 생성 ─────────────────────────────────────
+# { school: { date: [menu,...] } }
+menu_map = {}
+for _, row in df.iterrows():
+    s, d, m = row['학교명'], row['급식일자'], row['menus']
+    if s not in menu_map: menu_map[s] = {}
+    menu_map[s][d] = m
+
+# JSON 직렬화 (menus 리스트 포함)
+result_json = json.dumps({
+    'swap'     : all_results,
+    'menu_map' : menu_map,
+    'repeated' : list(repeated),
+    'n_menus'  : len(baseline),
+    'n_schools': len(df['학교명'].unique()),
+})
+`);
+
+    setProgress(85, '결과 처리 중...');
+
+    const resultStr = pyodide.globals.get('result_json');
+    const result    = JSON.parse(resultStr);
+
+    setProgress(95, '달력 렌더링 중...');
+
+    initDashboard(result);
+
+    setProgress(100, '완료!');
+    setTimeout(hideProgress, 400);
+
+  } catch(err) {
+    hideProgress();
+    alert('분석 오류: ' + err.message);
+    console.error(err);
+  }
+}
+
+async function rerun() {
+  if (!csvText) { alert('CSV 파일을 먼저 업로드하세요'); return; }
+  await runAnalysis();
+}
+
+// ═══════════════════════════════════════════════
+// 대시보드 초기화
+// ═══════════════════════════════════════════════
+function initDashboard(result) {
+  // menuData: { school: { date: [menus] } }
+  menuData = result.menu_map;
+  schools  = [...new Set([
+    ...Object.keys(menuData),
+    ...result.swap.map(d => d.school)
+  ])].sort();
+
+  // swapData: { school: [sorted swap rows with rank] }
+  swapData = {};
+  for (const row of result.swap) {
+    if (!swapData[row.school]) swapData[row.school] = [];
+    swapData[row.school].push(row);
+  }
+
+  // 학교 드롭다운
+  const sel = document.getElementById('school-sel');
+  sel.innerHTML = '';
+  schools.forEach(s => {
+    const o = document.createElement('option');
+    o.value = s; o.textContent = s;
+    sel.appendChild(o);
+  });
+  curSchool = schools[0] || '';
+
+  // 가장 최근 달로 이동
+  const allDates = Object.values(menuData[curSchool] || {});
+  const allKeys  = Object.keys(menuData[curSchool] || {}).map(Number).sort((a,b)=>b-a);
+  if (allKeys.length) {
+    const d = String(allKeys[0]);
+    curY = parseInt(d.slice(0,4));
+    curM = parseInt(d.slice(4,6));
+  }
+
+  document.getElementById('upload-panel').style.display = 'none';
+  document.getElementById('main').style.display = 'block';
+  render();
+}
+
+// ═══════════════════════════════════════════════
+// 달력 유틸
+// ═══════════════════════════════════════════════
+function dstr(y,m,d){ return `${y}${String(m).padStart(2,'0')}${String(d).padStart(2,'0')}`; }
+function fd(s){ return s ? `${s.slice(4,6)}/${s.slice(6,8)}` : ''; }
+function ff(s){ return s ? `${s.slice(0,4)}.${s.slice(4,6)}.${s.slice(6,8)}` : ''; }
+
+function getRank(date) {
+  const list = swapData[curSchool] || [];
+  const hit  = list.find(d => d.date_hi === date || d.date_lo === date);
+  if (!hit) return 0;
+  return hit.rank === 1 ? 1 : hit.rank === 2 ? 2 : 0;
+}
+
+function onSchoolChange() {
+  curSchool = document.getElementById('school-sel').value;
+  selDate = null; render();
+}
+function shiftMonth(delta) {
+  curM += delta;
+  if (curM > 12){ curM = 1; curY++; }
+  if (curM < 1) { curM = 12; curY--; }
+  selDate = null; render();
+}
+
+// ═══════════════════════════════════════════════
+// 렌더링
+// ═══════════════════════════════════════════════
+function render() {
+  document.getElementById('mlbl').textContent =
+    `${curY} / ${String(curM).padStart(2,'0')}`;
+  renderCal(); renderSideSwap(); renderSideMenu();
+}
+
+function renderCal() {
+  const grid = document.getElementById('cal-grid');
+  grid.innerHTML = '';
+  const fd1  = new Date(curY, curM-1, 1).getDay();
+  const dim  = new Date(curY, curM, 0).getDate();
+  const dipm = new Date(curY, curM-1, 0).getDate();
+  const cells = [];
+  for (let i=0; i<fd1; i++) cells.push({day: dipm-fd1+1+i, t:'p'});
+  for (let d=1; d<=dim; d++) cells.push({day:d, t:'c'});
+  const rem = 42 - cells.length;
+  for (let d=1; d<=rem; d++) cells.push({day:d, t:'n'});
+
+  const today = new Date();
+  const mm    = menuData[curSchool] || {};
+
+  cells.forEach(({day, t}) => {
+    const cell = document.createElement('div');
+    cell.className = 'cc';
+    let yy = curY, mo = curM;
+    if (t==='p'){ mo=curM-1; if(mo<1){mo=12;yy--;} }
+    else if(t==='n'){ mo=curM+1; if(mo>12){mo=1;yy++;} }
+    const dk = dstr(yy, mo, day);
+    if (t !== 'c') cell.classList.add('other');
+    const dow = new Date(yy, mo-1, day).getDay();
+    if (dow===0) cell.classList.add('hol');
+    if (dow===6) cell.classList.add('sat');
+    const isToday = (yy===today.getFullYear() && mo===today.getMonth()+1 && day===today.getDate());
+
+    const dn = document.createElement('div');
+    dn.className = 'dnum';
+    dn.innerHTML = `${day}${isToday ? '<span class="today-d"></span>' : ''}`;
+    cell.appendChild(dn);
+
+    const menus = mm[dk];
+    if (menus && menus.length) {
+      cell.classList.add('clickable');
+      const rank = getRank(dk);
+      if (rank===1) cell.classList.add('r1');
+      else if (rank===2) cell.classList.add('r2');
+      if (rank===1 || rank===2) {
+        const bdg = document.createElement('div');
+        bdg.className = `swap-bdg r${rank}`;
+        bdg.textContent = rank===1 ? '● 1순위' : '● 2순위';
+        cell.appendChild(bdg);
+      }
+      const chips = document.createElement('div');
+      chips.className = 'chips';
+      menus.slice(0,3).forEach((m,i) => {
+        const ch = document.createElement('div');
+        ch.className = 'chip' + (i<2 ? ' main' : '');
+        ch.textContent = m; ch.title = m;
+        chips.appendChild(ch);
+      });
+      if (menus.length > 3) {
+        const more = document.createElement('div');
+        more.className = 'chip';
+        more.textContent = `+${menus.length-3}`;
+        chips.appendChild(more);
+      }
+      cell.appendChild(chips);
+      if (dk === selDate) cell.classList.add('sel');
+      cell.addEventListener('click', () => { selDate=dk; renderCal(); renderSideMenu(); });
+    }
+    grid.appendChild(cell);
+  });
+}
+
+function renderSideMenu() {
+  const lbl  = document.getElementById('sel-lbl');
+  const body = document.getElementById('side-menu');
+  if (!selDate) {
+    lbl.textContent = '날짜 클릭';
+    body.innerHTML  = '<div class="no-data">달력에서 날짜를 클릭하세요</div>';
+    return;
+  }
+  const menus = (menuData[curSchool]||{})[selDate] || [];
+  lbl.textContent = ff(selDate);
+  if (!menus.length) { body.innerHTML='<div class="no-data">급식 정보 없음</div>'; return; }
+  const rank = getRank(selDate);
+  let banner = '';
+  if (rank===1) banner=`<div style="background:var(--red-bg);border:1px solid var(--red-bd);border-radius:7px;padding:6px 10px;font-size:11px;color:var(--red);font-weight:700;margin-bottom:8px">🔴 1순위 교환 추천일</div>`;
+  else if (rank===2) banner=`<div style="background:var(--orange-bg);border:1px solid var(--orange-bd);border-radius:7px;padding:6px 10px;font-size:11px;color:var(--orange);font-weight:700;margin-bottom:8px">🟠 2순위 교환 추천일</div>`;
+  body.innerHTML = banner + menus.map(m => `<div class="menu-row"><div class="menu-dot2"></div>${m}</div>`).join('');
+}
+
+function renderSideSwap() {
+  const body = document.getElementById('side-swap');
+  const cnt  = document.getElementById('swap-cnt');
+  const list = swapData[curSchool] || [];
+  const ms   = `${curY}${String(curM).padStart(2,'0')}`;
+  const inM  = list.filter(d => d.date_hi.startsWith(ms) || d.date_lo.startsWith(ms));
+  cnt.textContent = inM.length ? `${inM.length}쌍` : '없음';
+  if (!inM.length) { body.innerHTML='<div class="no-data">이달 교환 추천 없음</div>'; return; }
+  body.innerHTML = inM.slice(0,6).map(d => `
+    <div class="swap-item r${d.rank<=1?1:2}" onclick="openMo('${d.date_hi}','${d.date_lo}')">
+      <div class="si-head">
+        <span class="si-rank r${d.rank<=1?1:2}">${d.rank}순위</span>
+        <div class="si-dates">${fd(d.date_hi)} ⇄ ${fd(d.date_lo)}</div>
+      </div>
+      <div class="si-scores">
+        <span>점수 <span class="si-v" style="color:var(--accent)">${d.swap_score.toFixed(3)}</span></span>
+        <span>다양성 <span class="si-v" style="color:var(--accent)">${d.menu_diversity.toFixed(3)}</span></span>
+        <span>영양 <span class="si-v" style="color:var(--green)">${d.nutrient_sim.toFixed(3)}</span></span>
+      </div>
+    </div>`).join('');
+}
+
+// ═══════════════════════════════════════════════
+// 모달
+// ═══════════════════════════════════════════════
+function openMo(dhi, dlo) {
+  const list = swapData[curSchool] || [];
+  const d    = list.find(x => x.date_hi===dhi && x.date_lo===dlo);
+  if (!d) return;
+  document.getElementById('m-title').textContent = `${ff(d.date_hi)}  ⇄  ${ff(d.date_lo)}`;
+  document.getElementById('m-sub').textContent   = `${curSchool}  ·  ${d.rank}순위 교환 추천`;
+  const ahi = (menuData[curSchool]||{})[d.date_hi] || [];
+  const alo = (menuData[curSchool]||{})[d.date_lo] || [];
+  document.getElementById('m-body').innerHTML = `
+    <div class="msect">점수 분석</div>
+    <div class="sg">
+      <div class="sb"><div class="sbv" style="color:var(--accent)">${d.swap_score.toFixed(4)}</div><div class="sbl">Swap Score</div></div>
+      <div class="sb"><div class="sbv" style="color:var(--accent)">${d.menu_diversity.toFixed(3)}</div><div class="sbl">메뉴 다양성</div></div>
+      <div class="sb"><div class="sbv" style="color:var(--green)">${d.nutrient_sim.toFixed(3)}</div><div class="sbl">영양 유사도</div></div>
+      <div class="sb"><div class="sbv" style="color:var(--amber)">${d.rep_gap}</div><div class="sbl">반복 격차</div></div>
+    </div>
+    <div class="msect">계산 공식</div>
+    <div class="formula">
+<span class="a">score</span> = (${d.menu_diversity.toFixed(3)}×α + ${d.nutrient_sim.toFixed(3)}×β) × log(1+<span class="o">${d.rep_gap}</span>)<br>
+      = <span class="a">${d.swap_score.toFixed(4)}</span>
+    </div>
+    <div class="msect">반복 메뉴 현황</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:2px">
+      <div style="background:var(--red-bg);border:1px solid var(--red-bd);border-radius:8px;padding:9px 11px">
+        <div style="font-size:10px;color:var(--red);font-weight:700;margin-bottom:5px">${fd(d.date_hi)} — 반복 ${d.rep_hi}개</div>
+        <div style="height:4px;background:var(--bg3);border-radius:99px;overflow:hidden">
+          <div style="height:100%;width:${Math.min(100,d.rep_hi*10)}%;background:linear-gradient(90deg,var(--red),var(--amber));border-radius:99px"></div>
+        </div>
+      </div>
+      <div style="background:var(--green-bg);border:1px solid var(--green-bd);border-radius:8px;padding:9px 11px">
+        <div style="font-size:10px;color:var(--green);font-weight:700;margin-bottom:5px">${fd(d.date_lo)} — 반복 ${d.rep_lo}개</div>
+        <div style="height:4px;background:var(--bg3);border-radius:99px;overflow:hidden">
+          <div style="height:100%;width:${Math.min(100,d.rep_lo*10)}%;background:linear-gradient(90deg,var(--green),var(--teal));border-radius:99px"></div>
+        </div>
+      </div>
+    </div>
+    <div class="msect">메뉴 비교</div>
+    <div class="cg">
+      <div class="cc2"><div class="ch" style="color:var(--red)">● 교환 대상일</div><div class="cd">${ff(d.date_hi)}</div>${ahi.map(m=>`<span class="m-tag">${m}</span>`).join('')}</div>
+      <div class="cc2"><div class="ch" style="color:var(--green)">● 교환 후보일</div><div class="cd">${ff(d.date_lo)}</div>${alo.map(m=>`<span class="m-tag">${m}</span>`).join('')}</div>
+    </div>`;
+  document.getElementById('mo').classList.add('open');
+}
+function closeMo() { document.getElementById('mo').classList.remove('open'); }
+document.getElementById('mo').addEventListener('click', e => { if(e.target===e.currentTarget) closeMo(); });
+document.addEventListener('keydown', e => { if(e.key==='Escape') closeMo(); });
+</script>
+</body>
+</html>
