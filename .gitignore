@@ -10,6 +10,7 @@ wheels/
 .venv
 .vscode
 .env
+data/
 
 # temp
 src/preproc/devide_per_school.py

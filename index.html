@@ -3,741 +3,1335 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>급식 식단 분석 · 달력</title>
+<title>급식 식단 교환 추천</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;700&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;600&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
 <style>
-*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
-:root{
-  --bg:#f4f6fb;--bg2:#ffffff;--bg3:#f0f2f8;--surface:#e8ebf4;
-  --border:rgba(60,80,140,.1);--border2:rgba(60,80,140,.18);
-  --text:#1a1d2e;--text2:#5a6080;--text3:#9298b8;
-  --accent:#3b7ef4;--purple:#7c3aed;--teal:#0d9488;
-  --red:#dc2626;--red-bg:rgba(220,38,38,.08);--red-bd:rgba(220,38,38,.28);
-  --orange:#ea6c00;--orange-bg:rgba(234,108,0,.09);--orange-bd:rgba(234,108,0,.3);
-  --green:#059669;--green-bg:rgba(5,150,105,.08);--green-bd:rgba(5,150,105,.28);
-  --amber:#d97706;--mono:"DM Mono",monospace;--sans:"Noto Sans KR",sans-serif;
+/* ── 리셋 & 변수 ─────────────────────────────────────── */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --bg:        #f5f6fa;
+  --bg2:       #ffffff;
+  --bg3:       #f0f1f5;
+  --border:    rgba(0,0,0,0.07);
+  --border2:   rgba(0,0,0,0.13);
+  --text:      #1a1d2e;
+  --text2:     #5a5f7a;
+  --text3:     #9599b3;
+  --accent:    #4361ee;
+  --accent2:   #2d4fd6;
+  --rank1:     #e03131;
+  --rank1bg:   rgba(224,49,49,0.07);
+  --rank1bd:   rgba(224,49,49,0.28);
+  --rank2:     #e8590c;
+  --rank2bg:   rgba(232,89,12,0.07);
+  --rank2bd:   rgba(232,89,12,0.28);
+  --rank3:     #c08000;
+  --rank3bg:   rgba(192,128,0,0.07);
+  --rank3bd:   rgba(192,128,0,0.28);
+  --ok:        #0ca678;
+  --okbg:      rgba(12,166,120,0.08);
+  --font:      'Noto Sans KR', sans-serif;
+  --mono:      'DM Mono', monospace;
+  --radius:    12px;
+  --radius-sm: 8px;
 }
-body{font-family:var(--sans);background:var(--bg);color:var(--text);min-height:100vh;font-size:13px;line-height:1.5;overflow-x:hidden}
-.bg-grid{position:fixed;inset:0;pointer-events:none;z-index:0;
-  background-image:linear-gradient(rgba(59,126,244,.06) 1px,transparent 1px),linear-gradient(90deg,rgba(59,126,244,.06) 1px,transparent 1px);
-  background-size:32px 32px}
-/* 헤더 */
-header{position:sticky;top:0;z-index:50;background:rgba(244,246,251,.92);backdrop-filter:blur(12px);border-bottom:1px solid var(--border)}
-.hdr{max-width:1380px;margin:0 auto;padding:0 20px;height:52px;display:flex;align-items:center;justify-content:space-between;gap:12px}
-.logo{display:flex;align-items:center;gap:9px;flex-shrink:0}
-.logo-ic{width:32px;height:32px;border-radius:8px;background:linear-gradient(135deg,var(--accent),var(--purple));display:flex;align-items:center;justify-content:center;font-size:16px}
-.logo-t{font-size:14px;font-weight:700}.logo-y{font-size:11px;color:var(--text3);font-family:var(--mono)}
-/* 업로드 */
-#upload-panel{position:relative;z-index:1;max-width:600px;margin:72px auto 0;padding:0 20px}
-.up-title{font-size:22px;font-weight:700;text-align:center;margin-bottom:8px}
-.up-desc{color:var(--text2);text-align:center;margin-bottom:28px;font-size:13px;line-height:1.7}
-.drop-box{border:1.5px dashed var(--border2);border-radius:14px;padding:36px 24px;text-align:center;cursor:pointer;background:var(--bg2);transition:all .2s;user-select:none;position:relative;overflow:hidden}
-.drop-box::before{content:'';position:absolute;inset:0;background:radial-gradient(circle at 50% 0%,rgba(79,142,247,.05),transparent 60%);opacity:0;transition:opacity .3s}
-.drop-box:hover,.drop-box.over{border-color:var(--accent);background:var(--bg3)}
-.drop-box:hover::before,.drop-box.over::before{opacity:1}
-.drop-box.done{border-color:var(--green);border-style:solid}
-.db-icon{font-size:32px;margin-bottom:10px}
-.db-title{font-size:14px;font-weight:700;margin-bottom:4px}
-.db-hint{font-size:11px;color:var(--text3);font-family:var(--mono)}
-.db-name{font-size:11px;color:var(--green);margin-top:6px;font-family:var(--mono);display:none}
-.up-btn{margin-top:16px;width:100%;padding:12px;background:linear-gradient(135deg,var(--accent),var(--purple));border:none;border-radius:10px;color:#fff;font-size:14px;font-weight:700;font-family:var(--sans);cursor:pointer;transition:opacity .2s}
-.up-btn:hover{opacity:.88}
-.up-btn:disabled{opacity:.35;cursor:not-allowed}
-/* 진행 오버레이 */
-#progress-overlay{display:none;position:fixed;inset:0;z-index:300;background:rgba(200,210,230,.7);backdrop-filter:blur(8px);align-items:center;justify-content:center;flex-direction:column;gap:16px}
-#progress-overlay.open{display:flex}
-.prog-box{background:var(--bg2);border:1px solid var(--border2);border-radius:16px;padding:32px 40px;text-align:center;min-width:320px}
-.prog-title{font-size:16px;font-weight:700;margin-bottom:8px}
-.prog-msg{font-size:13px;color:var(--text2);margin-bottom:20px;min-height:20px}
-.prog-bar-wrap{height:6px;background:var(--bg3);border-radius:99px;overflow:hidden}
-.prog-bar{height:100%;background:linear-gradient(90deg,var(--accent),var(--purple));border-radius:99px;transition:width .4s ease;width:0%}
-/* 메인 */
-#main{display:none;position:relative;z-index:1;max-width:1380px;margin:0 auto;padding:14px 20px 60px}
-.top-bar{display:flex;align-items:center;gap:8px;margin-bottom:12px;flex-wrap:wrap}
-.sel{appearance:none;background:var(--bg2);color:var(--text);border:1px solid var(--border2);border-radius:8px;padding:7px 28px 7px 11px;font-family:var(--sans);font-size:12px;font-weight:500;cursor:pointer;outline:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%235a5e72'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 9px center;transition:border-color .2s}
-.sel:hover,.sel:focus{border-color:var(--accent)}
-.nav-btn{background:var(--bg2);border:1px solid var(--border2);border-radius:8px;color:var(--text2);padding:7px 14px;font-size:13px;cursor:pointer;transition:all .15s;font-family:var(--sans);font-weight:500}
-.nav-btn:hover{border-color:var(--accent);color:var(--text)}
-.month-lbl{font-size:16px;font-weight:700;font-family:var(--mono);min-width:110px;text-align:center}
-.legend{display:flex;align-items:center;gap:14px;flex-wrap:wrap;margin-left:auto}
-.leg-item{display:flex;align-items:center;gap:5px;font-size:11px;color:var(--text2)}
-.leg-dot{width:9px;height:9px;border-radius:3px;flex-shrink:0}
-/* 파라미터 바 */
-.param-bar{display:flex;align-items:center;gap:16px;margin-bottom:14px;background:var(--bg2);border:1px solid var(--border);border-radius:10px;padding:10px 16px;flex-wrap:wrap}
-.param-group{display:flex;align-items:center;gap:8px;font-size:12px}
-.param-label{color:var(--text3);white-space:nowrap}
-.param-input{background:var(--bg3);color:var(--text);border:1px solid var(--border2);border-radius:6px;padding:4px 8px;font-family:var(--mono);font-size:12px;width:60px;outline:none;text-align:center}
-.param-input:focus{border-color:var(--accent)}
-.rerun-btn{margin-left:auto;background:linear-gradient(135deg,var(--accent),var(--purple));border:none;border-radius:7px;color:#fff;padding:6px 14px;font-size:12px;font-weight:700;font-family:var(--sans);cursor:pointer;transition:opacity .2s;white-space:nowrap}
-.rerun-btn:hover{opacity:.85}
-/* 패널 */
-.panels{display:grid;grid-template-columns:1fr 300px;gap:14px;align-items:start}
-@media(max-width:900px){.panels{grid-template-columns:1fr}}
-/* 달력 */
-.cal-wrap{background:var(--bg2);border:1px solid var(--border);border-radius:14px;overflow:hidden}
-.cal-head{display:grid;grid-template-columns:repeat(7,1fr);background:var(--bg3);border-bottom:1px solid var(--border)}
-.cal-hcell{padding:8px 4px;text-align:center;font-size:10.5px;font-weight:700;color:var(--text3);letter-spacing:.04em}
-.cal-hcell:first-child{color:#dc2626}.cal-hcell:last-child{color:#7c3aed}
-.cal-grid{display:grid;grid-template-columns:repeat(7,1fr)}
-.cc{min-height:90px;border-right:1px solid var(--border);border-bottom:1px solid var(--border);padding:5px 4px;transition:background .12s}
-.cc:nth-child(7n){border-right:none}
-.cc.other{opacity:.28}.cc.hol .dnum{color:#dc2626}.cc.sat .dnum{color:#7c3aed}
-.cc.clickable{cursor:pointer}.cc.clickable:hover{background:var(--bg3)}
-.cc.sel{background:rgba(79,142,247,.09)!important;outline:2px solid var(--accent);outline-offset:-2px}
-.cc.r1{background:var(--red-bg)!important;outline:1.5px solid var(--red-bd);outline-offset:-1.5px}
-.cc.r1:hover{background:rgba(239,68,68,.19)!important}
-.cc.r2{background:var(--orange-bg)!important;outline:1.5px solid var(--orange-bd);outline-offset:-1.5px}
-.cc.r2:hover{background:rgba(249,115,22,.19)!important}
-.cc.r1 .dnum,.cc.r2 .dnum{color:var(--text)}
-.dnum{font-size:11px;font-weight:700;color:var(--text3);margin-bottom:3px;font-family:var(--mono);display:flex;align-items:center;gap:3px}
-.today-d{width:5px;height:5px;border-radius:50%;background:var(--accent);display:inline-block}
-.swap-bdg{display:inline-flex;align-items:center;font-size:9px;font-weight:700;padding:2px 5px;border-radius:4px;margin-bottom:2px;font-family:var(--mono)}
-.swap-bdg.r1{background:var(--red-bg);color:var(--red);border:1px solid var(--red-bd)}
-.swap-bdg.r2{background:var(--orange-bg);color:var(--orange);border:1px solid var(--orange-bd)}
-.chips{display:flex;flex-wrap:wrap;gap:2px}
-.chip{font-size:9px;color:var(--text3);background:var(--bg3);border-radius:3px;padding:1px 4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%}
-.chip.main{color:var(--text2)}
-/* 사이드 */
-.side{display:flex;flex-direction:column;gap:10px;position:sticky;top:66px}
-.scard{background:var(--bg2);border:1px solid var(--border);border-radius:12px;overflow:hidden}
-.scard-h{padding:11px 14px 9px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between}
-.scard-t{font-size:12px;font-weight:700}
-.scard-b{padding:12px 14px}
-.no-data{color:var(--text3);font-size:12px;text-align:center;padding:18px 0}
-.menu-row{display:flex;align-items:center;gap:7px;padding:5px 7px;background:var(--bg3);border-radius:6px;font-size:12px;margin-bottom:3px}
-.menu-row:last-child{margin-bottom:0}
-.menu-dot2{width:4px;height:4px;border-radius:50%;background:var(--text3);flex-shrink:0}
-.swap-item{border-radius:8px;padding:9px 11px;border:1px solid;cursor:pointer;transition:filter .15s;margin-bottom:6px}
-.swap-item:last-child{margin-bottom:0}
-.swap-item:hover{filter:brightness(1.12)}
-.swap-item.r1{background:var(--red-bg);border-color:var(--red-bd)}
-.swap-item.r2{background:var(--orange-bg);border-color:var(--orange-bd)}
-.si-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:4px}
-.si-rank{font-size:9px;font-weight:700;padding:2px 6px;border-radius:99px;font-family:var(--mono)}
-.si-rank.r1{background:var(--red);color:#fff}.si-rank.r2{background:var(--orange);color:#fff}
-.si-dates{font-size:12px;font-weight:700;font-family:var(--mono);color:var(--text)}
-.si-scores{display:flex;gap:8px;font-size:10px;color:var(--text3)}
-.si-v{font-family:var(--mono)}
-/* 모달 */
-#mo{display:none;position:fixed;inset:0;z-index:200;background:rgba(180,190,220,.6);backdrop-filter:blur(8px);align-items:center;justify-content:center;padding:20px}
-#mo.open{display:flex}
-.modal{background:var(--bg2);border:1px solid var(--border2);border-radius:18px;width:100%;max-width:500px;max-height:88vh;overflow-y:auto;animation:mIn .22s cubic-bezier(.34,1.56,.64,1)}
-@keyframes mIn{from{opacity:0;transform:scale(.93) translateY(14px)}to{opacity:1;transform:scale(1) translateY(0)}}
-.mh{padding:18px 20px 14px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:flex-start}
-.mt{font-size:15px;font-weight:700}.ms{font-size:11px;color:var(--text3);margin-top:3px}
-.mx{width:28px;height:28px;background:var(--bg3);border:1px solid var(--border);border-radius:7px;color:var(--text2);display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:14px;flex-shrink:0;transition:all .15s}
-.mx:hover{color:var(--text)}
-.mb{padding:18px 20px 22px}
-.msect{font-size:10px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.06em;margin:14px 0 7px}
-.msect:first-child{margin-top:0}
-.sg{display:grid;grid-template-columns:repeat(4,1fr);gap:7px}
-.sb{background:var(--bg3);border-radius:8px;padding:9px 6px;text-align:center}
-.sbv{font-family:var(--mono);font-size:17px;font-weight:500}.sbl{font-size:9.5px;color:var(--text3);margin-top:2px}
-.formula{background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:10px 12px;font-family:var(--mono);font-size:11.5px;color:var(--text2);line-height:2}
-.formula .a{color:var(--accent)}.formula .g{color:var(--green)}.formula .o{color:var(--amber)}
-.cg{display:grid;grid-template-columns:1fr 1fr;gap:8px}
-.cc2{background:var(--bg3);border-radius:8px;padding:10px 12px}
-.ch{font-size:10px;font-weight:700;margin-bottom:5px;display:flex;align-items:center;gap:4px}
-.cd{font-family:var(--mono);font-size:12px;color:var(--text);margin-bottom:5px}
-.m-tag{display:inline-block;font-size:11px;background:var(--surface);border:1px solid var(--border);border-radius:5px;padding:3px 6px;margin:2px 2px 2px 0;color:var(--text2)}
-::-webkit-scrollbar{width:5px;height:5px}
-::-webkit-scrollbar-track{background:var(--bg3)}
-::-webkit-scrollbar-thumb{background:var(--surface);border-radius:99px}
+
+body {
+  font-family: var(--font);
+  background: var(--bg);
+  color: var(--text);
+  min-height: 100vh;
+  font-size: 14px;
+  line-height: 1.6;
+}
+
+/* ── 레이아웃 ─────────────────────────────────────────── */
+.wrap { max-width: 1400px; margin: 0 auto; padding: 0 24px 80px; }
+
+/* ── 헤더 ─────────────────────────────────────────────── */
+header {
+  padding: 40px 0 32px;
+  border-bottom: 1px solid var(--border);
+  margin-bottom: 36px;
+}
+header h1 {
+  font-size: 22px;
+  font-weight: 600;
+  letter-spacing: -0.3px;
+  color: var(--text);
+}
+header p {
+  color: var(--text2);
+  font-size: 13px;
+  margin-top: 6px;
+}
+.header-inner {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+.badge-steps {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+.step-badge {
+  font-size: 11px;
+  font-weight: 500;
+  padding: 4px 10px;
+  border-radius: 99px;
+  border: 1px solid var(--border2);
+  color: var(--text2);
+  font-family: var(--mono);
+}
+.step-badge.active {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #fff;
+}
+
+/* ── 업로드 섹션 ──────────────────────────────────────── */
+.upload-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+  margin-bottom: 24px;
+}
+@media (max-width: 640px) { .upload-grid { grid-template-columns: 1fr; } }
+
+.upload-card {
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 20px;
+  transition: border-color .2s;
+}
+.upload-card:hover { border-color: var(--border2); }
+.upload-card.has-file { border-color: rgba(91,127,255,0.4); }
+
+.upload-label {
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--text2);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  margin-bottom: 12px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.dot { width: 6px; height: 6px; border-radius: 50%; flex-shrink: 0; }
+.dot-basis { background: var(--ok); }
+.dot-target { background: var(--accent); }
+
+.upload-zone {
+  border: 1.5px dashed var(--border2);
+  border-radius: var(--radius-sm);
+  padding: 28px 16px;
+  text-align: center;
+  cursor: pointer;
+  transition: all .2s;
+  position: relative;
+  overflow: hidden;
+}
+.upload-zone:hover, .upload-zone.dragover {
+  border-color: var(--accent);
+  background: rgba(91,127,255,0.05);
+}
+.upload-zone input[type=file] {
+  position: absolute; inset: 0; opacity: 0; cursor: pointer; width: 100%;
+}
+.upload-icon { font-size: 24px; margin-bottom: 8px; }
+.upload-text { font-size: 13px; color: var(--text2); }
+.upload-sub  { font-size: 11px; color: var(--text3); margin-top: 4px; font-family: var(--mono); }
+.file-name {
+  font-size: 12px;
+  color: var(--ok);
+  margin-top: 10px;
+  font-family: var(--mono);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* ── 파라미터 패널 ────────────────────────────────────── */
+.params-row {
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 20px;
+  display: flex;
+  gap: 24px;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  margin-bottom: 24px;
+}
+.param-group { display: flex; flex-direction: column; gap: 6px; min-width: 120px; }
+.param-group label {
+  font-size: 11px; color: var(--text2); font-weight: 500; letter-spacing: 0.06em;
+  display: flex; align-items: center; gap: 5px;
+}
+.auto-badge {
+  font-size: 9px;
+  font-weight: 600;
+  padding: 1px 5px;
+  border-radius: 99px;
+  background: rgba(62,207,142,0.18);
+  color: var(--ok);
+  letter-spacing: 0.04em;
+  font-family: var(--mono);
+  display: none;
+}
+.auto-badge.visible { display: inline; }
+.param-group input[type=number] {
+  background: var(--bg3);
+  border: 1px solid var(--border2);
+  border-radius: var(--radius-sm);
+  color: var(--text);
+  font-family: var(--mono);
+  font-size: 13px;
+  padding: 7px 10px;
+  width: 100%;
+  outline: none;
+  transition: border-color .2s;
+}
+.param-group input:focus { border-color: var(--accent); }
+.run-btn {
+  margin-left: auto;
+  background: var(--accent);
+  border: none;
+  border-radius: var(--radius-sm);
+  color: #fff;
+  font-family: var(--font);
+  font-size: 13px;
+  font-weight: 600;
+  padding: 9px 28px;
+  cursor: pointer;
+  transition: all .18s;
+  white-space: nowrap;
+  letter-spacing: 0.02em;
+}
+.run-btn:hover { background: var(--accent2); transform: translateY(-1px); }
+.run-btn:active { transform: translateY(0); }
+.run-btn:disabled { opacity: .45; cursor: not-allowed; transform: none; }
+
+/* ── 학교 선택 ────────────────────────────────────────── */
+.school-row {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  margin-bottom: 28px;
+  flex-wrap: wrap;
+}
+.school-select {
+  flex: 1;
+  min-width: 200px;
+  background: var(--bg2);
+  border: 1px solid var(--border2);
+  border-radius: var(--radius-sm);
+  color: var(--text);
+  font-family: var(--font);
+  font-size: 13px;
+  padding: 9px 12px;
+  outline: none;
+  cursor: pointer;
+}
+.school-select:focus { border-color: var(--accent); }
+.school-info {
+  font-size: 12px;
+  color: var(--text3);
+  font-family: var(--mono);
+}
+
+/* ── 결과 레이아웃 ────────────────────────────────────── */
+.results-grid {
+  display: grid;
+  grid-template-columns: 300px 1fr;
+  gap: 20px;
+  align-items: start;
+}
+@media (max-width: 900px) { .results-grid { grid-template-columns: 1fr; } }
+
+/* ── 추천 리스트 패널 ────────────────────────────────── */
+.reco-panel {
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  overflow: hidden;
+  position: sticky;
+  top: 20px;
+}
+.reco-panel-head {
+  padding: 14px 16px;
+  border-bottom: 1px solid var(--border);
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--text2);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+.reco-item {
+  padding: 14px 16px;
+  border-bottom: 1px solid var(--border);
+  cursor: pointer;
+  transition: background .15s;
+  position: relative;
+}
+.reco-item:last-child { border-bottom: none; }
+.reco-item:hover { background: var(--bg3); }
+.reco-item.selected { background: rgba(91,127,255,0.08); }
+
+.reco-rank {
+  font-size: 10px;
+  font-weight: 600;
+  font-family: var(--mono);
+  letter-spacing: 0.1em;
+  margin-bottom: 5px;
+}
+.rank-1 { color: var(--rank1); }
+.rank-2 { color: var(--rank2); }
+.rank-3 { color: var(--rank3); }
+
+.reco-dates {
+  font-size: 13px;
+  font-weight: 500;
+  font-family: var(--mono);
+  color: var(--text);
+  margin-bottom: 6px;
+}
+.reco-scores {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.score-pill {
+  font-size: 10px;
+  font-family: var(--mono);
+  padding: 2px 7px;
+  border-radius: 99px;
+  border: 1px solid var(--border2);
+  color: var(--text2);
+}
+
+/* ── 달력 ─────────────────────────────────────────────── */
+.calendar-wrap {
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  overflow: hidden;
+}
+.calendar-head {
+  padding: 16px 20px;
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.calendar-title {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--text);
+}
+.legend {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+.legend-item {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 11px;
+  color: var(--text2);
+}
+.legend-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+
+.cal-grid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+}
+.cal-dow {
+  padding: 10px 0;
+  text-align: center;
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--text3);
+  letter-spacing: 0.06em;
+  border-bottom: 1px solid var(--border);
+}
+.cal-dow:nth-child(1) { color: #e03131; }
+.cal-dow:nth-child(7) { color: #4361ee; }
+
+.cal-cell {
+  min-height: 100px;
+  padding: 8px;
+  border-right: 1px solid var(--border);
+  border-bottom: 1px solid var(--border);
+  position: relative;
+  transition: background .15s;
+  cursor: default;
+  vertical-align: top;
+}
+.cal-cell:nth-child(7n) { border-right: none; }
+.cal-cell.empty { background: transparent; cursor: default; }
+.cal-cell.has-data:hover { background: var(--bg3); }
+.cal-cell.highlighted-1 {
+  background: var(--rank1bg) !important;
+  border: 1.5px solid var(--rank1bd) !important;
+}
+.cal-cell.highlighted-2 {
+  background: var(--rank2bg) !important;
+  border: 1.5px solid var(--rank2bd) !important;
+}
+.cal-cell.highlighted-3 {
+  background: var(--rank3bg) !important;
+  border: 1.5px solid var(--rank3bd) !important;
+}
+
+.cal-date {
+  font-size: 12px;
+  font-family: var(--mono);
+  font-weight: 500;
+  color: var(--text2);
+  margin-bottom: 6px;
+}
+.cal-cell.highlighted-1 .cal-date { color: var(--rank1); font-weight: 600; }
+.cal-cell.highlighted-2 .cal-date { color: var(--rank2); font-weight: 600; }
+.cal-cell.highlighted-3 .cal-date { color: var(--rank3); font-weight: 600; }
+
+.cal-rank-badge {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  font-size: 10px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--mono);
+}
+.badge-r1 { background: var(--rank1); color: #fff; }
+.badge-r2 { background: var(--rank2); color: #fff; }
+.badge-r3 { background: var(--rank3); color: #fff; }
+
+.cal-menus {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.cal-menu-item {
+  font-size: 10.5px;
+  color: var(--text2);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  line-height: 1.4;
+}
+.cal-menu-item.is-repeat {
+  color: var(--rank1);
+  font-weight: 500;
+}
+.cal-more { font-size: 10px; color: var(--text3); margin-top: 2px; }
+
+/* ── 상세 패널 (하단) ────────────────────────────────── */
+.detail-panel {
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  margin-top: 20px;
+  overflow: hidden;
+  display: none;
+}
+.detail-panel.visible { display: block; }
+.detail-head {
+  padding: 14px 20px;
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.detail-head h3 { font-size: 13px; font-weight: 600; color: var(--text); }
+.close-btn {
+  background: none;
+  border: none;
+  color: var(--text3);
+  cursor: pointer;
+  font-size: 18px;
+  line-height: 1;
+  padding: 0 2px;
+  transition: color .15s;
+}
+.close-btn:hover { color: var(--text); }
+.detail-body {
+  padding: 20px;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 20px;
+}
+@media (max-width: 600px) { .detail-body { grid-template-columns: 1fr; } }
+.detail-col h4 {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text3);
+  margin-bottom: 10px;
+}
+.detail-date {
+  font-size: 16px;
+  font-weight: 600;
+  font-family: var(--mono);
+  margin-bottom: 10px;
+}
+.detail-col-hi .detail-date { color: var(--rank1); }
+.detail-col-lo .detail-date { color: var(--ok); }
+.detail-menu-list { list-style: none; display: flex; flex-direction: column; gap: 4px; }
+.detail-menu-list li {
+  font-size: 13px;
+  color: var(--text);
+  padding: 5px 10px;
+  border-radius: 6px;
+  background: var(--bg3);
+}
+.detail-menu-list li.repeat-menu {
+  color: var(--rank1);
+  background: var(--rank1bg);
+  border: 1px solid var(--rank1bd);
+}
+.detail-score-row {
+  display: grid;
+  grid-template-columns: repeat(4,1fr);
+  gap: 8px;
+  margin-top: 16px;
+  grid-column: 1/-1;
+}
+.score-card {
+  background: var(--bg3);
+  border-radius: var(--radius-sm);
+  padding: 12px;
+  text-align: center;
+}
+.score-card-val {
+  font-size: 18px;
+  font-weight: 600;
+  font-family: var(--mono);
+  color: var(--accent);
+  margin-bottom: 4px;
+}
+.score-card-lbl {
+  font-size: 10px;
+  color: var(--text3);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+/* ── 빈 상태 / 로딩 ─────────────────────────────────── */
+.empty-state {
+  text-align: center;
+  padding: 60px 20px;
+  color: var(--text3);
+}
+.empty-state .icon { font-size: 36px; margin-bottom: 12px; }
+.empty-state p { font-size: 14px; }
+
+.progress-wrap {
+  padding: 40px 20px;
+  text-align: center;
+}
+.progress-bar {
+  width: 100%;
+  height: 3px;
+  background: var(--border2);
+  border-radius: 99px;
+  overflow: hidden;
+  margin: 16px auto 0;
+  max-width: 300px;
+}
+.progress-fill {
+  height: 100%;
+  background: var(--accent);
+  border-radius: 99px;
+  width: 0%;
+  transition: width .3s ease;
+}
+.progress-label { font-size: 13px; color: var(--text2); }
+
+/* ── 토스트 ──────────────────────────────────────────── */
+.toast {
+  position: fixed;
+  bottom: 24px;
+  right: 24px;
+  background: var(--bg3);
+  border: 1px solid var(--border2);
+  border-radius: var(--radius-sm);
+  padding: 12px 18px;
+  font-size: 13px;
+  color: var(--text);
+  box-shadow: 0 8px 32px rgba(0,0,0,0.4);
+  opacity: 0;
+  transform: translateY(8px);
+  transition: all .25s;
+  z-index: 1000;
+  max-width: 320px;
+}
+.toast.show { opacity: 1; transform: translateY(0); }
+.toast.error { border-color: var(--rank1bd); color: var(--rank1); }
 </style>
 </head>
 <body>
-<div class="bg-grid"></div>
-<header>
-  <div class="hdr">
-    <div class="logo">
-      <div class="logo-ic">🍱</div>
-      <div><div class="logo-t">급식 식단 분석 · 달력</div></div>
-    </div>
-    <div class="logo-y">충청북도 초등학교 · 2025 · Pyodide</div>
-  </div>
-</header>
+<div class="wrap">
 
-<!-- 업로드 -->
-<div id="upload-panel">
-  <div class="up-title">🥗 식단 데이터 업로드</div>
-  <div class="up-desc">
-    <code style="font-family:var(--mono);font-size:12px;background:var(--bg3);padding:2px 7px;border-radius:4px">menu_preproc.csv</code>
-    파일 하나만 업로드하면<br>
-    Python 분석부터 달력 표시까지 자동으로 실행됩니다
-  </div>
-  <div class="drop-box" id="db-menu" onclick="document.getElementById('fi-menu').click()">
-    <div class="db-icon">📂</div>
-    <div class="db-title">여기에 파일을 드래그하거나 클릭해서 선택</div>
-    <div class="db-hint">menu_preproc.csv</div>
-    <div class="db-name" id="nm-menu"></div>
-  </div>
-  <input type="file" id="fi-menu" accept=".csv" style="display:none">
-  <button class="up-btn" id="start-btn" disabled onclick="runAnalysis()">🔬 Python 분석 실행 →</button>
-</div>
-
-<!-- 진행 오버레이 -->
-<div id="progress-overlay">
-  <div class="prog-box">
-    <div class="prog-title">⚙️ Python 분석 실행 중</div>
-    <div class="prog-msg" id="prog-msg">초기화 중...</div>
-    <div class="prog-bar-wrap"><div class="prog-bar" id="prog-bar"></div></div>
-  </div>
-</div>
-
-<!-- 메인 -->
-<div id="main">
-  <!-- 파라미터 바 -->
-  <div class="param-bar">
-    <div class="param-group">
-      <span class="param-label">반복 기준 횟수</span>
-      <input class="param-input" id="p-repeat" type="number" value="5" min="1" max="20">
-    </div>
-    <div class="param-group">
-      <span class="param-label">baseline 배율</span>
-      <input class="param-input" id="p-mult" type="number" value="1.5" min="1" max="5" step="0.1">
-    </div>
-    <div class="param-group">
-      <span class="param-label">α (다양성)</span>
-      <input class="param-input" id="p-alpha" type="number" value="0.5" min="0" max="1" step="0.1">
-    </div>
-    <div class="param-group">
-      <span class="param-label">β (영양)</span>
-      <input class="param-input" id="p-beta" type="number" value="0.5" min="0" max="1" step="0.1">
-    </div>
-    <div class="param-group">
-      <span class="param-label">학교당 추천 수</span>
-      <input class="param-input" id="p-topk" type="number" value="5" min="1" max="20">
-    </div>
-    <button class="rerun-btn" onclick="rerun()">🔄 재분석</button>
-  </div>
-
-  <div class="top-bar">
-    <button class="nav-btn" onclick="shiftMonth(-1)">‹ 이전</button>
-    <div class="month-lbl" id="mlbl">2025 / 12</div>
-    <button class="nav-btn" onclick="shiftMonth(1)">다음 ›</button>
-    <select class="sel" id="school-sel" onchange="onSchoolChange()"></select>
-    <div class="legend">
-      <div class="leg-item"><div class="leg-dot" style="background:var(--red);border:1px solid var(--red-bd)"></div>1순위</div>
-      <div class="leg-item"><div class="leg-dot" style="background:var(--orange);border:1px solid var(--orange-bd)"></div>2순위</div>
-      <div class="leg-item"><div class="leg-dot" style="background:var(--bg3);border:1px solid var(--border2)"></div>급식일</div>
-    </div>
-  </div>
-
-  <div class="panels">
-    <div>
-      <div class="cal-wrap">
-        <div class="cal-head">
-          <div class="cal-hcell">일</div><div class="cal-hcell">월</div><div class="cal-hcell">화</div>
-          <div class="cal-hcell">수</div><div class="cal-hcell">목</div><div class="cal-hcell">금</div><div class="cal-hcell">토</div>
-        </div>
-        <div class="cal-grid" id="cal-grid"></div>
+  <!-- 헤더 -->
+  <header>
+    <div class="header-inner">
+      <div>
+        <h1>급식 식단 교환 추천 시스템</h1>
+        <p>이전 식단(basis) 패턴을 학습해 신규 식단(target)의 반복 메뉴를 탐지하고 최적 교환 날짜를 추천합니다</p>
+      </div>
+      <div class="badge-steps">
+        <span class="step-badge active" id="step1-badge">01 업로드</span>
+        <span style="color:var(--text3);font-size:12px">→</span>
+        <span class="step-badge" id="step2-badge">02 분석</span>
+        <span style="color:var(--text3);font-size:12px">→</span>
+        <span class="step-badge" id="step3-badge">03 결과</span>
       </div>
     </div>
-    <div class="side">
-      <div class="scard">
-        <div class="scard-h">
-          <div class="scard-t">🍽 선택일 메뉴</div>
-          <div style="font-size:10px;color:var(--text3)" id="sel-lbl">날짜 클릭</div>
-        </div>
-        <div class="scard-b"><div id="side-menu"><div class="no-data">달력에서 날짜를 클릭하세요</div></div></div>
+  </header>
+
+  <!-- 업로드 -->
+  <div class="upload-grid">
+    <div class="upload-card" id="card-basis">
+      <div class="upload-label">
+        <span class="dot dot-basis"></span>
+        이전 식단 &nbsp;<span style="font-family:var(--mono);font-size:10px;color:var(--text3)">menu_basis.csv</span>
       </div>
-      <div class="scard">
-        <div class="scard-h">
-          <div class="scard-t">🔄 이달 교환 추천</div>
-          <div style="font-size:10px;color:var(--text3)" id="swap-cnt">—</div>
-        </div>
-        <div class="scard-b"><div id="side-swap"><div class="no-data">—</div></div></div>
+      <div class="upload-zone" id="zone-basis">
+        <input type="file" accept=".csv" id="file-basis">
+        <div class="upload-icon">📂</div>
+        <div class="upload-text">파일을 드래그하거나 클릭하여 업로드</div>
+        <div class="upload-sub">1~11월 급식 데이터 · CSV</div>
       </div>
+      <div class="file-name" id="name-basis" style="display:none"></div>
+    </div>
+    <div class="upload-card" id="card-target">
+      <div class="upload-label">
+        <span class="dot dot-target"></span>
+        신규 식단 &nbsp;<span style="font-family:var(--mono);font-size:10px;color:var(--text3)">menu_target.csv</span>
+      </div>
+      <div class="upload-zone" id="zone-target">
+        <input type="file" accept=".csv" id="file-target">
+        <div class="upload-icon">📅</div>
+        <div class="upload-text">파일을 드래그하거나 클릭하여 업로드</div>
+        <div class="upload-sub">12월 급식 데이터 · CSV</div>
+      </div>
+      <div class="file-name" id="name-target" style="display:none"></div>
     </div>
   </div>
-</div>
 
-<!-- 모달 -->
-<div id="mo">
-  <div class="modal">
-    <div class="mh">
-      <div><div class="mt" id="m-title"></div><div class="ms" id="m-sub"></div></div>
-      <div class="mx" onclick="closeMo()">✕</div>
+  <!-- 파라미터 -->
+  <div class="params-row">
+    <div class="param-group">
+      <label>반복 기준 횟수 <span class="auto-badge" id="badge-repeat">AUTO</span></label>
+      <input type="number" id="p-repeat" value="5" min="1" max="30" step="1">
     </div>
-    <div class="mb" id="m-body"></div>
+    <div class="param-group">
+      <label>Baseline 배율 <span class="auto-badge" id="badge-mult">AUTO</span></label>
+      <input type="number" id="p-mult" value="1.5" min="1.0" max="5.0" step="0.1">
+    </div>
+    <div class="param-group">
+      <label>메뉴 다양성 α</label>
+      <input type="number" id="p-alpha" value="0.5" min="0" max="1" step="0.1">
+    </div>
+    <div class="param-group">
+      <label>영양 유사도 β</label>
+      <input type="number" id="p-beta" value="0.5" min="0" max="1" step="0.1">
+    </div>
+    <div class="param-group">
+      <label>추천 수 (Top K)</label>
+      <input type="number" id="p-topk" value="5" min="1" max="20" step="1">
+    </div>
+    <button class="run-btn" id="run-btn" disabled>분석 시작 →</button>
   </div>
+
+  <!-- 학교 선택 (분석 후 노출) -->
+  <div id="school-row" class="school-row" style="display:none">
+    <select class="school-select" id="school-select"></select>
+    <span class="school-info" id="school-info"></span>
+  </div>
+
+  <!-- 결과 영역 -->
+  <div id="result-area">
+    <div class="empty-state">
+      <div class="icon">🍱</div>
+      <p>CSV 파일을 업로드하고 분석을 시작하세요</p>
+    </div>
+  </div>
+
 </div>
 
-<!-- Pyodide -->
-<script src="https://cdn.jsdelivr.net/pyodide/v0.26.4/full/pyodide.js"></script>
+<!-- 토스트 -->
+<div class="toast" id="toast"></div>
+
 <script>
-// ═══════════════════════════════════════════════
-// 상태
-// ═══════════════════════════════════════════════
-let pyodide = null;
-let csvText = null;
-let menuData = {}, swapData = {}, schools = [];
-let curSchool = '', curY = 2025, curM = 12, selDate = null;
-
-// ═══════════════════════════════════════════════
-// Pyodide 초기화 (백그라운드에서 미리 로드)
-// ═══════════════════════════════════════════════
-async function initPyodide() {
-  try {
-    pyodide = await loadPyodide();
-    await pyodide.loadPackage(['pandas', 'numpy', 'scikit-learn']);
-    console.log('Pyodide 로드 완료');
-  } catch(e) {
-    console.error('Pyodide 로드 실패:', e);
-  }
-}
-initPyodide(); // 페이지 로드 시 미리 시작
-
-// ═══════════════════════════════════════════════
-// 파일 업로드
-// ═══════════════════════════════════════════════
-const dbMenu = document.getElementById('db-menu');
-dbMenu.addEventListener('dragover', e => { e.preventDefault(); dbMenu.classList.add('over'); });
-dbMenu.addEventListener('dragleave', () => dbMenu.classList.remove('over'));
-dbMenu.addEventListener('drop', e => {
-  e.preventDefault(); dbMenu.classList.remove('over');
-  if (e.dataTransfer.files[0]) loadCSV(e.dataTransfer.files[0]);
-});
-document.getElementById('fi-menu').addEventListener('change', e => {
-  if (e.target.files[0]) loadCSV(e.target.files[0]);
-});
-
-function loadCSV(file) {
-  const reader = new FileReader();
-  reader.onload = e => {
-    csvText = e.target.result;
-    const nm = document.getElementById('nm-menu');
-    nm.textContent = file.name; nm.style.display = 'block';
-    dbMenu.classList.add('done');
-    document.getElementById('start-btn').disabled = false;
-  };
-  reader.readAsText(file, 'utf-8');
+/* ══════════════════════════════════════════════════════
+   유틸 함수
+══════════════════════════════════════════════════════ */
+function toast(msg, isError = false) {
+  const el = document.getElementById('toast');
+  el.textContent = msg;
+  el.className = 'toast show' + (isError ? ' error' : '');
+  clearTimeout(el._t);
+  el._t = setTimeout(() => { el.className = 'toast'; }, 3200);
 }
 
-// ═══════════════════════════════════════════════
-// 진행 표시
-// ═══════════════════════════════════════════════
-function setProgress(pct, msg) {
-  document.getElementById('prog-bar').style.width = pct + '%';
-  document.getElementById('prog-msg').textContent = msg;
-}
-function showProgress() { document.getElementById('progress-overlay').classList.add('open'); }
-function hideProgress() { document.getElementById('progress-overlay').classList.remove('open'); }
-
-// ═══════════════════════════════════════════════
-// Python 분석 실행
-// ═══════════════════════════════════════════════
-async function runAnalysis() {
-  if (!csvText) return;
-
-  showProgress();
-  setProgress(5, 'Pyodide 준비 중...');
-
-  // Pyodide 아직 로딩 중이면 대기
-  if (!pyodide) {
-    setProgress(10, 'Python 런타임 로딩 중... (최초 1회, 약 10-20초)');
-    pyodide = await loadPyodide();
-    await pyodide.loadPackage(['pandas', 'numpy', 'scikit-learn']);
-  }
-
-  setProgress(25, 'CSV 파싱 중...');
-
-  // CSV 텍스트를 Python으로 전달
-  pyodide.globals.set('csv_text', csvText);
-  pyodide.globals.set('repeat_threshold', parseFloat(document.getElementById('p-repeat').value) || 5);
-  pyodide.globals.set('baseline_mult',    parseFloat(document.getElementById('p-mult').value)   || 1.5);
-  pyodide.globals.set('alpha_val',        parseFloat(document.getElementById('p-alpha').value)   || 0.5);
-  pyodide.globals.set('beta_val',         parseFloat(document.getElementById('p-beta').value)    || 0.5);
-  pyodide.globals.set('top_k',            parseInt(document.getElementById('p-topk').value)      || 5);
-
-  setProgress(40, '데이터 전처리 중...');
-
-  try {
-    await pyodide.runPythonAsync(`
-import ast, math, json, warnings, re
-from collections import Counter
-from itertools import combinations
-from io import StringIO
-import numpy as np
-import pandas as pd
-from sklearn.feature_extraction.text import TfidfVectorizer
-from sklearn.metrics.pairwise import cosine_similarity
-from sklearn.preprocessing import StandardScaler
-warnings.filterwarnings('ignore')
-
-# ── 전처리 ──────────────────────────────────────────────────
-def clean_num(v):
-    if pd.isna(v): return None
-    m = re.search(r'[\\d.]+', str(v))
-    return float(m.group()) if m else None
-
-df = pd.read_csv(StringIO(csv_text))
-df['급식일자'] = df['급식일자'].astype(str).str.strip()
-df['month']   = df['급식일자'].str[4:6].astype(int)
-
-for col in ['칼로리정보','탄수화물(g)','단백질(g)','지방(g)','칼슘(mg)','철분(mg)']:
-    if col in df.columns:
-        df[col] = df[col].apply(clean_num)
-if '칼로리정보' in df.columns:
-    df.rename(columns={'칼로리정보':'칼로리_num'}, inplace=True)
-
-def parse_menu(raw):
-    try: return ast.literal_eval(str(raw))
-    except: return []
-
-df['menus']     = df['menu_list'].apply(parse_menu)
-df['menus']     = df['menus'].apply(lambda l: [str(m).strip() for m in l if str(m).strip()])
-df['menu_text'] = df['menus'].apply(lambda l: ', '.join(l))
-
-# ── Baseline (1~11월) ────────────────────────────────────────
-train   = df[df['month'] <= 11]
-ctr     = Counter()
-for m in train['menus']: ctr.update(m)
-n_months = train['month'].nunique() or 1
-baseline = {k: v / n_months for k, v in ctr.items()}
-
-# ── 반복 메뉴 탐지 (12월) ────────────────────────────────────
-dec     = df[df['month'] == 12]
-dctr    = Counter()
-for m in dec['menus']: dctr.update(m)
-
-repeated = set()
-for menu, cnt in dctr.items():
-    avg   = baseline.get(menu, 0)
-    ratio = (cnt / avg) if avg > 0 else float('inf')
-    if cnt >= repeat_threshold or ratio >= baseline_mult:
-        repeated.add(menu)
-
-# ── TF-IDF 임베딩 (전체) ─────────────────────────────────────
-NCOLS = [c for c in ['칼로리_num','탄수화물(g)','단백질(g)','지방(g)','칼슘(mg)','철분(mg)'] if c in df.columns]
-
-tfidf  = TfidfVectorizer(analyzer='char_wb', ngram_range=(2, 4), max_features=3000)
-all_emb = tfidf.fit_transform(df['menu_text'].tolist()).toarray()
-
-nut_raw    = df[NCOLS].fillna(0).values
-nut_scaled = StandardScaler().fit_transform(nut_raw) if nut_raw.shape[0] > 1 else nut_raw
-
-# ── 학교별 swap candidates ───────────────────────────────────
-all_results = []
-
-for school in df['학교명'].unique():
-    mask_dec = (df['학교명'] == school) & (df['month'] == 12)
-    df_sch   = df[mask_dec].copy().reset_index(drop=True)
-    if len(df_sch) < 2: continue
-
-    idx_list  = df.index[mask_dec].tolist()
-    emb_sch   = all_emb[idx_list]
-    nut_sch   = nut_scaled[idx_list]
-    msim      = cosine_similarity(emb_sch)
-    nsim      = cosine_similarity(nut_sch)
-
-    df_sch['rep_score'] = df_sch['menus'].apply(
-        lambda l: sum(1 for m in l if m in repeated)
-    )
-
-    pairs = []
-    for i, j in combinations(range(len(df_sch)), 2):
-        ri, rj = int(df_sch.iloc[i]['rep_score']), int(df_sch.iloc[j]['rep_score'])
-        gap = abs(ri - rj)
-        if gap == 0: continue
-        div = 1.0 - float(msim[i, j])
-        ns  = (float(nsim[i, j]) + 1) / 2
-        sc  = (alpha_val * div + beta_val * ns) * math.log1p(gap)
-        hi, lo = (i, j) if ri >= rj else (j, i)
-        pairs.append({
-            'school'  : school,
-            'date_hi' : str(df_sch.iloc[hi]['급식일자']),
-            'date_lo' : str(df_sch.iloc[lo]['급식일자']),
-            'rep_hi'  : int(df_sch.iloc[hi]['rep_score']),
-            'rep_lo'  : int(df_sch.iloc[lo]['rep_score']),
-            'rep_gap' : gap,
-            'menu_diversity': round(div, 4),
-            'nutrient_sim'  : round(ns,  4),
-            'swap_score'    : round(sc,  4),
-            'menus_hi': df_sch.iloc[hi]['menus'],
-            'menus_lo': df_sch.iloc[lo]['menus'],
-        })
-
-    pairs.sort(key=lambda x: -x['swap_score'])
-    for rank, p in enumerate(pairs[:top_k], 1):
-        p['rank'] = rank
-    all_results.extend(pairs[:top_k])
-
-# ── 달력용 menu_map 생성 ─────────────────────────────────────
-# { school: { date: [menu,...] } }
-menu_map = {}
-for _, row in df.iterrows():
-    s, d, m = row['학교명'], row['급식일자'], row['menus']
-    if s not in menu_map: menu_map[s] = {}
-    menu_map[s][d] = m
-
-# JSON 직렬화 (menus 리스트 포함)
-result_json = json.dumps({
-    'swap'     : all_results,
-    'menu_map' : menu_map,
-    'repeated' : list(repeated),
-    'n_menus'  : len(baseline),
-    'n_schools': len(df['학교명'].unique()),
-})
-`);
-
-    setProgress(85, '결과 처리 중...');
-
-    const resultStr = pyodide.globals.get('result_json');
-    const result    = JSON.parse(resultStr);
-
-    setProgress(95, '달력 렌더링 중...');
-
-    initDashboard(result);
-
-    setProgress(100, '완료!');
-    setTimeout(hideProgress, 400);
-
-  } catch(err) {
-    hideProgress();
-    alert('분석 오류: ' + err.message);
-    console.error(err);
-  }
+function fmtDate(d) {
+  // "20251203" → "12.03 (수)"
+  const s = String(d);
+  const y = s.slice(0,4), m = s.slice(4,6), day = s.slice(6,8);
+  const dow = ['일','월','화','수','목','금','토'][new Date(`${y}-${m}-${day}`).getDay()];
+  return `${m}.${day} (${dow})`;
 }
 
-async function rerun() {
-  if (!csvText) { alert('CSV 파일을 먼저 업로드하세요'); return; }
-  await runAnalysis();
-}
-
-// ═══════════════════════════════════════════════
-// 대시보드 초기화
-// ═══════════════════════════════════════════════
-function initDashboard(result) {
-  // menuData: { school: { date: [menus] } }
-  menuData = result.menu_map;
-  schools  = [...new Set([
-    ...Object.keys(menuData),
-    ...result.swap.map(d => d.school)
-  ])].sort();
-
-  // swapData: { school: [sorted swap rows with rank] }
-  swapData = {};
-  for (const row of result.swap) {
-    if (!swapData[row.school]) swapData[row.school] = [];
-    swapData[row.school].push(row);
-  }
-
-  // 학교 드롭다운
-  const sel = document.getElementById('school-sel');
-  sel.innerHTML = '';
-  schools.forEach(s => {
-    const o = document.createElement('option');
-    o.value = s; o.textContent = s;
-    sel.appendChild(o);
+/* ── CSV 파싱 ───────────────────────────────────────── */
+function parseCSV(text) {
+  const lines = text.trim().split('\n');
+  const header = parseCSVLine(lines[0]);
+  return lines.slice(1).filter(l => l.trim()).map(line => {
+    const vals = parseCSVLine(line);
+    const obj = {};
+    header.forEach((h, i) => { obj[h.trim()] = (vals[i] || '').trim(); });
+    return obj;
   });
-  curSchool = schools[0] || '';
+}
 
-  // 가장 최근 달로 이동
-  const allDates = Object.values(menuData[curSchool] || {});
-  const allKeys  = Object.keys(menuData[curSchool] || {}).map(Number).sort((a,b)=>b-a);
-  if (allKeys.length) {
-    const d = String(allKeys[0]);
-    curY = parseInt(d.slice(0,4));
-    curM = parseInt(d.slice(4,6));
+function parseCSVLine(line) {
+  const result = [];
+  let cur = '', inQ = false;
+  for (let i = 0; i < line.length; i++) {
+    const c = line[i];
+    if (c === '"') { inQ = !inQ; continue; }
+    if (c === ',' && !inQ) { result.push(cur); cur = ''; continue; }
+    cur += c;
   }
-
-  document.getElementById('upload-panel').style.display = 'none';
-  document.getElementById('main').style.display = 'block';
-  render();
+  result.push(cur);
+  return result;
 }
 
-// ═══════════════════════════════════════════════
-// 달력 유틸
-// ═══════════════════════════════════════════════
-function dstr(y,m,d){ return `${y}${String(m).padStart(2,'0')}${String(d).padStart(2,'0')}`; }
-function fd(s){ return s ? `${s.slice(4,6)}/${s.slice(6,8)}` : ''; }
-function ff(s){ return s ? `${s.slice(0,4)}.${s.slice(4,6)}.${s.slice(6,8)}` : ''; }
-
-function getRank(date) {
-  const list = swapData[curSchool] || [];
-  const hit  = list.find(d => d.date_hi === date || d.date_lo === date);
-  if (!hit) return 0;
-  return hit.rank === 1 ? 1 : hit.rank === 2 ? 2 : 0;
+function parseMenuList(raw) {
+  if (!raw) return [];
+  // "[' 찹쌀밥', '미역국']" 형태 파싱
+  try {
+    return raw
+      .replace(/^\[|\]$/g, '')
+      .split(',')
+      .map(s => s.trim().replace(/^['"]|['"]$/g, '').trim())
+      .filter(Boolean);
+  } catch { return []; }
 }
 
-function onSchoolChange() {
-  curSchool = document.getElementById('school-sel').value;
-  selDate = null; render();
-}
-function shiftMonth(delta) {
-  curM += delta;
-  if (curM > 12){ curM = 1; curY++; }
-  if (curM < 1) { curM = 12; curY--; }
-  selDate = null; render();
+function parseNum(v) {
+  if (v === '' || v === null || v === undefined) return null;
+  const m = String(v).match(/[\d.]+/);
+  return m ? parseFloat(m[0]) : null;
 }
 
-// ═══════════════════════════════════════════════
-// 렌더링
-// ═══════════════════════════════════════════════
-function render() {
-  document.getElementById('mlbl').textContent =
-    `${curY} / ${String(curM).padStart(2,'0')}`;
-  renderCal(); renderSideSwap(); renderSideMenu();
+/* ══════════════════════════════════════════════════════
+   TF-IDF (char n-gram 2~4) — Python 로직 포팅
+══════════════════════════════════════════════════════ */
+function charNgrams(text, n) {
+  const padded = `\u25a0${text}\u25a0`; // boundary marker
+  const grams = [];
+  for (let i = 0; i <= padded.length - n; i++) grams.push(padded.slice(i, i+n));
+  return grams;
 }
 
-function renderCal() {
-  const grid = document.getElementById('cal-grid');
-  grid.innerHTML = '';
-  const fd1  = new Date(curY, curM-1, 1).getDay();
-  const dim  = new Date(curY, curM, 0).getDate();
-  const dipm = new Date(curY, curM-1, 0).getDate();
-  const cells = [];
-  for (let i=0; i<fd1; i++) cells.push({day: dipm-fd1+1+i, t:'p'});
-  for (let d=1; d<=dim; d++) cells.push({day:d, t:'c'});
-  const rem = 42 - cells.length;
-  for (let d=1; d<=rem; d++) cells.push({day:d, t:'n'});
-
-  const today = new Date();
-  const mm    = menuData[curSchool] || {};
-
-  cells.forEach(({day, t}) => {
-    const cell = document.createElement('div');
-    cell.className = 'cc';
-    let yy = curY, mo = curM;
-    if (t==='p'){ mo=curM-1; if(mo<1){mo=12;yy--;} }
-    else if(t==='n'){ mo=curM+1; if(mo>12){mo=1;yy++;} }
-    const dk = dstr(yy, mo, day);
-    if (t !== 'c') cell.classList.add('other');
-    const dow = new Date(yy, mo-1, day).getDay();
-    if (dow===0) cell.classList.add('hol');
-    if (dow===6) cell.classList.add('sat');
-    const isToday = (yy===today.getFullYear() && mo===today.getMonth()+1 && day===today.getDate());
-
-    const dn = document.createElement('div');
-    dn.className = 'dnum';
-    dn.innerHTML = `${day}${isToday ? '<span class="today-d"></span>' : ''}`;
-    cell.appendChild(dn);
-
-    const menus = mm[dk];
-    if (menus && menus.length) {
-      cell.classList.add('clickable');
-      const rank = getRank(dk);
-      if (rank===1) cell.classList.add('r1');
-      else if (rank===2) cell.classList.add('r2');
-      if (rank===1 || rank===2) {
-        const bdg = document.createElement('div');
-        bdg.className = `swap-bdg r${rank}`;
-        bdg.textContent = rank===1 ? '● 1순위' : '● 2순위';
-        cell.appendChild(bdg);
-      }
-      const chips = document.createElement('div');
-      chips.className = 'chips';
-      menus.slice(0,3).forEach((m,i) => {
-        const ch = document.createElement('div');
-        ch.className = 'chip' + (i<2 ? ' main' : '');
-        ch.textContent = m; ch.title = m;
-        chips.appendChild(ch);
-      });
-      if (menus.length > 3) {
-        const more = document.createElement('div');
-        more.className = 'chip';
-        more.textContent = `+${menus.length-3}`;
-        chips.appendChild(more);
-      }
-      cell.appendChild(chips);
-      if (dk === selDate) cell.classList.add('sel');
-      cell.addEventListener('click', () => { selDate=dk; renderCal(); renderSideMenu(); });
+function buildTfidf(docs) {
+  // 1. 전체 vocab
+  const df = {}; // document frequency
+  const tfList = docs.map(doc => {
+    const freq = {};
+    for (let n = 2; n <= 4; n++) {
+      charNgrams(doc, n).forEach(g => { freq[g] = (freq[g]||0) + 1; });
     }
-    grid.appendChild(cell);
+    Object.keys(freq).forEach(g => { df[g] = (df[g]||0) + 1; });
+    return freq;
+  });
+
+  const vocab = Object.keys(df);
+  const N = docs.length;
+
+  // 2. TF-IDF 벡터화
+  const vecs = tfList.map(freq => {
+    const vec = new Float32Array(vocab.length);
+    vocab.forEach((g, i) => {
+      if (freq[g]) {
+        const tf = freq[g] / Object.values(freq).reduce((a,b)=>a+b,0);
+        const idf = Math.log((N + 1) / (df[g] + 1)) + 1;
+        vec[i] = tf * idf;
+      }
+    });
+    // L2 정규화
+    const norm = Math.sqrt(vec.reduce((a,v)=>a+v*v,0));
+    if (norm > 0) for (let i=0;i<vec.length;i++) vec[i] /= norm;
+    return vec;
+  });
+
+  return vecs;
+}
+
+function cosineSim(a, b) {
+  let dot = 0;
+  for (let i = 0; i < a.length; i++) dot += a[i] * b[i];
+  return Math.min(1, Math.max(-1, dot)); // 이미 정규화됨
+}
+
+/* ── StandardScaler ────────────────────────────────── */
+function standardScale(matrix) {
+  // matrix: [[v1,v2,...], ...]
+  const n = matrix.length, m = matrix[0].length;
+  const mean = new Array(m).fill(0);
+  const std  = new Array(m).fill(0);
+  matrix.forEach(row => row.forEach((v,j) => { mean[j] += (v||0)/n; }));
+  matrix.forEach(row => row.forEach((v,j) => { std[j] += ((v||0)-mean[j])**2/n; }));
+  std.forEach((_,j) => { std[j] = Math.sqrt(std[j]) || 1; });
+  return matrix.map(row => row.map((v,j) => ((v||0)-mean[j])/std[j]));
+}
+
+/* ══════════════════════════════════════════════════════
+   핵심 분석 로직 (Python meal_analysis.py 포팅)
+══════════════════════════════════════════════════════ */
+const NUTRIENT_COLS = ['칼로리정보','탄수화물(g)','단백질(g)','지방(g)','칼슘(mg)','철분(mg)'];
+
+function buildBaseline(basisRows) {
+  const counter = {};
+  basisRows.forEach(row => {
+    parseMenuList(row.menu_list).forEach(m => {
+      counter[m] = (counter[m]||0) + 1;
+    });
+  });
+  // 월 수 계산
+  const months = new Set(basisRows.map(r => String(r['급식일자']).slice(4,6)));
+  const nMonths = months.size || 11;
+  const baseline = {};
+  Object.entries(counter).forEach(([m,c]) => { baseline[m] = c / nMonths; });
+  return baseline;
+}
+
+function detectRepeated(targetRows, baseline, threshold, mult) {
+  const counter = {};
+  targetRows.forEach(row => {
+    parseMenuList(row.menu_list).forEach(m => {
+      counter[m] = (counter[m]||0) + 1;
+    });
+  });
+  const repeated = new Set();
+  Object.entries(counter).forEach(([m, cnt]) => {
+    const avg = baseline[m] || 0;
+    // baseline=0 인 메뉴 = 이전에 없던 신규 메뉴 → 반복 아님
+    if (avg === 0) return;
+    const ratio = cnt / avg;
+    if (cnt >= threshold || ratio >= mult) repeated.add(m);
+  });
+  return repeated;
+}
+
+function repScore(menus, repeated) {
+  return menus.filter(m => repeated.has(m)).length;
+}
+
+// 날짜 문자열 "20251203" → Date 객체
+function parseDate(d) {
+  const s = String(d);
+  return new Date(+s.slice(0,4), +s.slice(4,6)-1, +s.slice(6,8));
+}
+
+// 두 날짜 사이 일수 차이
+function dayGap(d1, d2) {
+  return Math.round(Math.abs(parseDate(d1) - parseDate(d2)) / 86400000);
+}
+
+function analyzeSchool(schoolRows, repeated, alpha, beta, topK) {
+  if (schoolRows.length < 2) return [];
+
+  const dates    = schoolRows.map(r => r['급식일자']);
+  const menuLists= schoolRows.map(r => parseMenuList(r.menu_list));
+  const texts    = menuLists.map(ms => ms.join(', '));
+
+  // 임베딩
+  const embeddings = buildTfidf(texts);
+
+  // 영양소 벡터
+  const nutRaw = schoolRows.map(r =>
+    NUTRIENT_COLS.map(c => parseNum(r[c]) || 0)
+  );
+  const nutScaled = standardScale(nutRaw);
+
+  // 코사인 유사도 행렬 미리 계산
+  const n = dates.length;
+  const menuSim   = Array.from({length:n}, (_,i) =>
+    Array.from({length:n}, (_,j) => cosineSim(embeddings[i], embeddings[j]))
+  );
+  const nutrSim   = Array.from({length:n}, (_,i) =>
+    Array.from({length:n}, (_,j) => cosineSim(nutScaled[i], nutScaled[j]))
+  );
+
+  const repScores = menuLists.map(ms => repScore(ms, repeated));
+
+  const results = [];
+  for (let i = 0; i < n; i++) {
+    for (let j = i+1; j < n; j++) {
+      const gap = Math.abs(repScores[i] - repScores[j]);
+      if (gap === 0) continue;
+
+      const diversity  = 1 - menuSim[i][j];
+      const nSim       = (nutrSim[i][j] + 1) / 2;
+
+      // 날짜 근접도 패널티
+      // 날짜가 가까울수록(day_gap 작을수록) 같은 메뉴가 연속으로 보이는 문제 → 교환 우선순위 높임
+      // date_penalty = 1 / log(2 + day_gap)
+      //   day_gap=1  → 1/log(3) ≈ 0.91
+      //   day_gap=5  → 1/log(7) ≈ 0.51
+      //   day_gap=10 → 1/log(12) ≈ 0.40
+      const dGap       = dayGap(dates[i], dates[j]);
+      const datePenalty = 1 / Math.log(2 + dGap);
+
+      const score = (alpha * diversity + beta * nSim) * Math.log1p(gap) * datePenalty;
+
+      const [hi, lo]  = repScores[i] >= repScores[j] ? [i,j] : [j,i];
+      results.push({
+        date_hi:        dates[hi],
+        date_lo:        dates[lo],
+        rep_hi:         repScores[hi],
+        rep_lo:         repScores[lo],
+        rep_gap:        gap,
+        day_gap:        dGap,
+        date_penalty:   datePenalty,
+        menu_diversity: diversity,
+        nutrient_sim:   nSim,
+        swap_score:     score,
+        menus_hi:       menuLists[hi],
+        menus_lo:       menuLists[lo],
+      });
+    }
+  }
+
+  results.sort((a,b) => b.swap_score - a.swap_score);
+  return results.slice(0, topK);
+}
+
+/* ══════════════════════════════════════════════════════
+   상태
+══════════════════════════════════════════════════════ */
+let basisData   = null;  // 이전 식단 rows
+let targetData  = null;  // 신규 식단 rows
+let allResults  = {};    // { 학교명: [candidates] }
+let repeated    = new Set();
+let currentSchool = null;
+
+/* ══════════════════════════════════════════════════════
+   파일 업로드 처리
+══════════════════════════════════════════════════════ */
+function setupUpload(inputId, zoneId, cardId, nameId, onLoad) {
+  const input = document.getElementById(inputId);
+  const zone  = document.getElementById(zoneId);
+  const card  = document.getElementById(cardId);
+  const nameEl= document.getElementById(nameId);
+
+  input.addEventListener('change', e => handleFile(e.target.files[0]));
+  zone.addEventListener('dragover', e => { e.preventDefault(); zone.classList.add('dragover'); });
+  zone.addEventListener('dragleave', () => zone.classList.remove('dragover'));
+  zone.addEventListener('drop', e => {
+    e.preventDefault();
+    zone.classList.remove('dragover');
+    handleFile(e.dataTransfer.files[0]);
+  });
+
+  function handleFile(file) {
+    if (!file || !file.name.endsWith('.csv')) {
+      toast('CSV 파일만 업로드 가능합니다', true); return;
+    }
+    const reader = new FileReader();
+    reader.onload = ev => {
+      try {
+        const rows = parseCSV(ev.target.result);
+        if (rows.length === 0) { toast('빈 파일입니다', true); return; }
+        nameEl.textContent = `✓ ${file.name}  (${rows.length.toLocaleString()}행)`;
+        nameEl.style.display = 'block';
+        card.classList.add('has-file');
+        onLoad(rows);
+        checkReady();
+      } catch(e) {
+        toast('CSV 파싱 오류: ' + e.message, true);
+      }
+    };
+    reader.readAsText(file, 'utf-8');
+  }
+}
+
+setupUpload('file-basis',  'zone-basis',  'card-basis',  'name-basis',  rows => {
+  basisData = rows;
+  autoFillParams(rows);
+});
+setupUpload('file-target', 'zone-target', 'card-target', 'name-target', rows => { targetData = rows; });
+
+function checkReady() {
+  document.getElementById('run-btn').disabled = !(basisData && targetData);
+}
+
+/* ══════════════════════════════════════════════════════
+   파라미터 자동 계산 (basis 데이터 로드 시 호출)
+══════════════════════════════════════════════════════ */
+function autoFillParams(basisRows) {
+
+  // 1. 월별 메뉴 등장 횟수: { 메뉴명: { '01': 3, '02': 5, ... } }
+  const menuByMonth = {};
+  basisRows.forEach(row => {
+    const month = String(row['급식일자']).slice(4, 6);
+    parseMenuList(row.menu_list).forEach(m => {
+      if (!menuByMonth[m]) menuByMonth[m] = {};
+      menuByMonth[m][month] = (menuByMonth[m][month] || 0) + 1;
+    });
+  });
+
+  const months  = [...new Set(basisRows.map(r => String(r['급식일자']).slice(4, 6)))];
+  const nMonths = months.length || 1;
+
+  // 2. 메뉴별 월평균 등장 횟수
+  const monthlyAvgs = Object.values(menuByMonth).map(byMonth => {
+    const total = Object.values(byMonth).reduce((a, b) => a + b, 0);
+    return total / nMonths;
+  });
+
+  // 3. repeat_threshold = 월평균 분포의 75th percentile (최소 2 보장)
+  const sortedAvg = [...monthlyAvgs].sort((a, b) => a - b);
+  const p75       = sortedAvg[Math.floor(sortedAvg.length * 0.75)] || 5;
+  const threshold = Math.max(2, Math.round(p75));
+
+  // 4. baseline_multiplier = 메뉴별 CV(변동계수) 중앙값으로 결정
+  //    CV가 클수록(등장이 불규칙) 배율을 낮게 → 민감하게 반복 탐지
+  //    CV가 작을수록(등장이 규칙적) 배율을 높게 → 엄격하게 반복 탐지
+  const cvs = Object.values(menuByMonth)
+    .filter(byMonth => Object.keys(byMonth).length >= 2)
+    .map(byMonth => {
+      const counts  = months.map(m => byMonth[m] || 0);
+      const mean    = counts.reduce((a, b) => a + b, 0) / nMonths;
+      if (mean === 0) return 0;
+      const variance = counts.reduce((a, c) => a + (c - mean) ** 2, 0) / nMonths;
+      return Math.sqrt(variance) / mean;
+    });
+
+  const sortedCV  = [...cvs].sort((a, b) => a - b);
+  const medianCV  = sortedCV[Math.floor(sortedCV.length / 2)] || 1;
+  const mult      = parseFloat(Math.max(1.1, 1.0 + 1.0 / (1.0 + medianCV)).toFixed(2));
+
+  // 5. 인풋에 반영 + AUTO 뱃지 표시
+  document.getElementById('p-repeat').value = threshold;
+  document.getElementById('p-mult').value   = mult;
+  document.getElementById('badge-repeat').classList.add('visible');
+  document.getElementById('badge-mult').classList.add('visible');
+
+  // 수동 수정 시 뱃지 제거
+  ['p-repeat', 'p-mult'].forEach((id, i) => {
+    document.getElementById(id).addEventListener('input', () => {
+      const badgeId = ['badge-repeat','badge-mult'][i];
+      document.getElementById(badgeId).classList.remove('visible');
+    }, { once: true });
+  });
+
+  toast(`파라미터 자동 설정 — 반복 기준 ${threshold}회 · 배율 ${mult}배`);
+}
+
+/* ══════════════════════════════════════════════════════
+   분석 실행
+══════════════════════════════════════════════════════ */
+document.getElementById('run-btn').addEventListener('click', runAnalysis);
+
+async function runAnalysis() {
+  const repeat = parseFloat(document.getElementById('p-repeat').value) || 5;
+  const mult   = parseFloat(document.getElementById('p-mult').value)   || 1.5;
+  const alpha  = parseFloat(document.getElementById('p-alpha').value)  || 0.5;
+  const beta   = parseFloat(document.getElementById('p-beta').value)   || 0.5;
+  const topK   = parseInt(document.getElementById('p-topk').value)     || 5;
+
+  // 스텝 UI
+  document.getElementById('step1-badge').classList.remove('active');
+  document.getElementById('step2-badge').classList.add('active');
+
+  // 진행 표시
+  showProgress('baseline 구축 중...');
+
+  await tick();
+
+  // Baseline
+  const baseline = buildBaseline(basisData);
+
+  updateProgress(30, '반복 메뉴 탐지 중...');
+  await tick();
+
+  repeated = detectRepeated(targetData, baseline, repeat, mult);
+
+  updateProgress(55, '학교별 임베딩 계산 중...');
+  await tick();
+
+  // 학교별 분석
+  const schools = [...new Set(targetData.map(r => r['학교명']))].filter(Boolean);
+  allResults = {};
+
+  for (let si = 0; si < schools.length; si++) {
+    const school = schools[si];
+    const rows   = targetData.filter(r => r['학교명'] === school);
+    allResults[school] = analyzeSchool(rows, repeated, alpha, beta, topK);
+    updateProgress(55 + Math.round(40 * (si+1) / schools.length), `분석 중... ${si+1}/${schools.length}`);
+    if (si % 5 === 0) await tick(); // 5개마다 UI 업데이트
+  }
+
+  updateProgress(100, '완료');
+  await tick();
+
+  // 스텝 UI
+  document.getElementById('step2-badge').classList.remove('active');
+  document.getElementById('step3-badge').classList.add('active');
+
+  // 학교 선택 셀렉트 구성
+  const sel = document.getElementById('school-select');
+  sel.innerHTML = schools.map(s =>
+    `<option value="${s}">${s}</option>`
+  ).join('');
+  document.getElementById('school-row').style.display = 'flex';
+
+  currentSchool = schools[0];
+  sel.value = currentSchool;
+  renderResults(currentSchool);
+  updateSchoolInfo(currentSchool);
+
+  toast(`분석 완료 · ${schools.length}개 학교 · 반복 메뉴 ${repeated.size}개 탐지`);
+}
+
+document.getElementById('school-select').addEventListener('change', e => {
+  currentSchool = e.target.value;
+  renderResults(currentSchool);
+  updateSchoolInfo(currentSchool);
+  document.getElementById('detail-panel')?.classList.remove('visible');
+});
+
+function updateSchoolInfo(school) {
+  const rows = targetData.filter(r => r['학교명'] === school);
+  const recs = allResults[school] || [];
+  document.getElementById('school-info').textContent =
+    `급식일 ${rows.length}일 · 추천 ${recs.length}쌍`;
+}
+
+function tick() { return new Promise(r => setTimeout(r, 0)); }
+
+/* ── 진행 바 ──────────────────────────────────────── */
+function showProgress(label) {
+  document.getElementById('result-area').innerHTML = `
+    <div class="progress-wrap">
+      <div class="progress-label" id="prog-label">${label}</div>
+      <div class="progress-bar"><div class="progress-fill" id="prog-fill"></div></div>
+    </div>`;
+}
+function updateProgress(pct, label) {
+  const f = document.getElementById('prog-fill');
+  const l = document.getElementById('prog-label');
+  if (f) f.style.width = pct + '%';
+  if (l) l.textContent = label;
+}
+
+/* ══════════════════════════════════════════════════════
+   결과 렌더링
+══════════════════════════════════════════════════════ */
+function renderResults(school) {
+  const cands = allResults[school] || [];
+  const rows  = targetData.filter(r => r['학교명'] === school)
+                           .sort((a,b) => String(a['급식일자']).localeCompare(String(b['급식일자'])));
+
+  // 강조 날짜 맵: date → rank(1,2,3...)
+  const highlightMap = {};
+  cands.forEach((c, i) => {
+    const rank = i + 1;
+    [c.date_hi, c.date_lo].forEach(d => {
+      if (!highlightMap[d] || highlightMap[d] > rank) highlightMap[d] = rank;
+    });
+  });
+
+  const html = `
+    <div class="results-grid">
+      <aside class="reco-panel">
+        <div class="reco-panel-head">교환 추천 Top ${cands.length}</div>
+        ${cands.length === 0
+          ? `<div style="padding:24px;text-align:center;color:var(--text3);font-size:13px">반복 메뉴 없음</div>`
+          : cands.map((c,i) => recoItemHTML(c, i)).join('')}
+      </aside>
+      <div>
+        ${renderCalendar(rows, highlightMap, cands)}
+        <div class="detail-panel" id="detail-panel"></div>
+      </div>
+    </div>`;
+
+  document.getElementById('result-area').innerHTML = html;
+
+  // 추천 아이템 클릭
+  cands.forEach((_, i) => {
+    document.getElementById(`reco-${i}`)?.addEventListener('click', () => openDetail(i, cands, school));
   });
 }
 
-function renderSideMenu() {
-  const lbl  = document.getElementById('sel-lbl');
-  const body = document.getElementById('side-menu');
-  if (!selDate) {
-    lbl.textContent = '날짜 클릭';
-    body.innerHTML  = '<div class="no-data">달력에서 날짜를 클릭하세요</div>';
-    return;
-  }
-  const menus = (menuData[curSchool]||{})[selDate] || [];
-  lbl.textContent = ff(selDate);
-  if (!menus.length) { body.innerHTML='<div class="no-data">급식 정보 없음</div>'; return; }
-  const rank = getRank(selDate);
-  let banner = '';
-  if (rank===1) banner=`<div style="background:var(--red-bg);border:1px solid var(--red-bd);border-radius:7px;padding:6px 10px;font-size:11px;color:var(--red);font-weight:700;margin-bottom:8px">🔴 1순위 교환 추천일</div>`;
-  else if (rank===2) banner=`<div style="background:var(--orange-bg);border:1px solid var(--orange-bd);border-radius:7px;padding:6px 10px;font-size:11px;color:var(--orange);font-weight:700;margin-bottom:8px">🟠 2순위 교환 추천일</div>`;
-  body.innerHTML = banner + menus.map(m => `<div class="menu-row"><div class="menu-dot2"></div>${m}</div>`).join('');
-}
-
-function renderSideSwap() {
-  const body = document.getElementById('side-swap');
-  const cnt  = document.getElementById('swap-cnt');
-  const list = swapData[curSchool] || [];
-  const ms   = `${curY}${String(curM).padStart(2,'0')}`;
-  const inM  = list.filter(d => d.date_hi.startsWith(ms) || d.date_lo.startsWith(ms));
-  cnt.textContent = inM.length ? `${inM.length}쌍` : '없음';
-  if (!inM.length) { body.innerHTML='<div class="no-data">이달 교환 추천 없음</div>'; return; }
-  body.innerHTML = inM.slice(0,6).map(d => `
-    <div class="swap-item r${d.rank<=1?1:2}" onclick="openMo('${d.date_hi}','${d.date_lo}')">
-      <div class="si-head">
-        <span class="si-rank r${d.rank<=1?1:2}">${d.rank}순위</span>
-        <div class="si-dates">${fd(d.date_hi)} ⇄ ${fd(d.date_lo)}</div>
+function recoItemHTML(c, i) {
+  const rankClass  = ['rank-1','rank-2','rank-3'][Math.min(i,2)] || 'rank-3';
+  const rankLabel  = ['1순위','2순위','3순위'][Math.min(i,2)] || `${i+1}순위`;
+  return `
+    <div class="reco-item" id="reco-${i}">
+      <div class="reco-rank ${rankClass}">${rankLabel}</div>
+      <div class="reco-dates">${fmtDate(c.date_hi)} ↔ ${fmtDate(c.date_lo)}</div>
+      <div class="reco-scores">
+        <span class="score-pill">score ${c.swap_score.toFixed(3)}</span>
+        <span class="score-pill">반복 gap ${c.rep_gap}</span>
+        <span class="score-pill">날짜 ${c.day_gap}일 차</span>
       </div>
-      <div class="si-scores">
-        <span>점수 <span class="si-v" style="color:var(--accent)">${d.swap_score.toFixed(3)}</span></span>
-        <span>다양성 <span class="si-v" style="color:var(--accent)">${d.menu_diversity.toFixed(3)}</span></span>
-        <span>영양 <span class="si-v" style="color:var(--green)">${d.nutrient_sim.toFixed(3)}</span></span>
-      </div>
-    </div>`).join('');
-}
-
-// ═══════════════════════════════════════════════
-// 모달
-// ═══════════════════════════════════════════════
-function openMo(dhi, dlo) {
-  const list = swapData[curSchool] || [];
-  const d    = list.find(x => x.date_hi===dhi && x.date_lo===dlo);
-  if (!d) return;
-  document.getElementById('m-title').textContent = `${ff(d.date_hi)}  ⇄  ${ff(d.date_lo)}`;
-  document.getElementById('m-sub').textContent   = `${curSchool}  ·  ${d.rank}순위 교환 추천`;
-  const ahi = (menuData[curSchool]||{})[d.date_hi] || [];
-  const alo = (menuData[curSchool]||{})[d.date_lo] || [];
-  document.getElementById('m-body').innerHTML = `
-    <div class="msect">점수 분석</div>
-    <div class="sg">
-      <div class="sb"><div class="sbv" style="color:var(--accent)">${d.swap_score.toFixed(4)}</div><div class="sbl">Swap Score</div></div>
-      <div class="sb"><div class="sbv" style="color:var(--accent)">${d.menu_diversity.toFixed(3)}</div><div class="sbl">메뉴 다양성</div></div>
-      <div class="sb"><div class="sbv" style="color:var(--green)">${d.nutrient_sim.toFixed(3)}</div><div class="sbl">영양 유사도</div></div>
-      <div class="sb"><div class="sbv" style="color:var(--amber)">${d.rep_gap}</div><div class="sbl">반복 격차</div></div>
-    </div>
-    <div class="msect">계산 공식</div>
-    <div class="formula">
-<span class="a">score</span> = (${d.menu_diversity.toFixed(3)}×α + ${d.nutrient_sim.toFixed(3)}×β) × log(1+<span class="o">${d.rep_gap}</span>)<br>
-      = <span class="a">${d.swap_score.toFixed(4)}</span>
-    </div>
-    <div class="msect">반복 메뉴 현황</div>
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:2px">
-      <div style="background:var(--red-bg);border:1px solid var(--red-bd);border-radius:8px;padding:9px 11px">
-        <div style="font-size:10px;color:var(--red);font-weight:700;margin-bottom:5px">${fd(d.date_hi)} — 반복 ${d.rep_hi}개</div>
-        <div style="height:4px;background:var(--bg3);border-radius:99px;overflow:hidden">
-          <div style="height:100%;width:${Math.min(100,d.rep_hi*10)}%;background:linear-gradient(90deg,var(--red),var(--amber));border-radius:99px"></div>
-        </div>
-      </div>
-      <div style="background:var(--green-bg);border:1px solid var(--green-bd);border-radius:8px;padding:9px 11px">
-        <div style="font-size:10px;color:var(--green);font-weight:700;margin-bottom:5px">${fd(d.date_lo)} — 반복 ${d.rep_lo}개</div>
-        <div style="height:4px;background:var(--bg3);border-radius:99px;overflow:hidden">
-          <div style="height:100%;width:${Math.min(100,d.rep_lo*10)}%;background:linear-gradient(90deg,var(--green),var(--teal));border-radius:99px"></div>
-        </div>
-      </div>
-    </div>
-    <div class="msect">메뉴 비교</div>
-    <div class="cg">
-      <div class="cc2"><div class="ch" style="color:var(--red)">● 교환 대상일</div><div class="cd">${ff(d.date_hi)}</div>${ahi.map(m=>`<span class="m-tag">${m}</span>`).join('')}</div>
-      <div class="cc2"><div class="ch" style="color:var(--green)">● 교환 후보일</div><div class="cd">${ff(d.date_lo)}</div>${alo.map(m=>`<span class="m-tag">${m}</span>`).join('')}</div>
     </div>`;
-  document.getElementById('mo').classList.add('open');
 }
-function closeMo() { document.getElementById('mo').classList.remove('open'); }
-document.getElementById('mo').addEventListener('click', e => { if(e.target===e.currentTarget) closeMo(); });
-document.addEventListener('keydown', e => { if(e.key==='Escape') closeMo(); });
+
+/* ── 달력 렌더링 ─────────────────────────────────── */
+function renderCalendar(rows, highlightMap, cands) {
+  if (rows.length === 0) return '<div class="empty-state"><p>해당 학교 데이터 없음</p></div>';
+
+  // 월 결정
+  const firstDate = String(rows[0]['급식일자']);
+  const year  = parseInt(firstDate.slice(0,4));
+  const month = parseInt(firstDate.slice(4,6));
+
+  const daysInMonth  = new Date(year, month, 0).getDate();
+  const firstDow     = new Date(year, month-1, 1).getDay(); // 0=일
+
+  // 날짜별 데이터 맵
+  const dateMap = {};
+  rows.forEach(r => { dateMap[String(r['급식일자'])] = r; });
+
+  let cells = '';
+  // 요일 헤더
+  ['일','월','화','수','목','금','토'].forEach(d => {
+    cells += `<div class="cal-dow">${d}</div>`;
+  });
+  // 빈 칸
+  for (let i = 0; i < firstDow; i++) cells += `<div class="cal-cell empty"></div>`;
+  // 날짜
+  for (let d = 1; d <= daysInMonth; d++) {
+    const dateKey = `${year}${String(month).padStart(2,'0')}${String(d).padStart(2,'0')}`;
+    const row     = dateMap[dateKey];
+    const rank    = highlightMap[dateKey];
+    const hlClass = rank ? (rank <= 3 ? `highlighted-${Math.min(rank,3)}` : '') : '';
+    const badgeHTML = rank && rank <= 3
+      ? `<div class="cal-rank-badge badge-r${Math.min(rank,3)}">${Math.min(rank,3)}</div>` : '';
+
+    if (!row) {
+      cells += `<div class="cal-cell${hlClass?' '+hlClass:''}">
+        ${badgeHTML}
+        <div class="cal-date">${d}</div>
+      </div>`;
+      continue;
+    }
+
+    const menus = parseMenuList(row.menu_list);
+    const menuHTML = menus.slice(0,4).map(m => {
+      const isRep = repeated.has(m);
+      return `<div class="cal-menu-item${isRep?' is-repeat':''}">${m}</div>`;
+    }).join('');
+    const moreHTML = menus.length > 4 ? `<div class="cal-more">+${menus.length-4}개</div>` : '';
+
+    cells += `<div class="cal-cell has-data${hlClass?' '+hlClass:''}" data-date="${dateKey}">
+      ${badgeHTML}
+      <div class="cal-date">${d}</div>
+      <div class="cal-menus">${menuHTML}${moreHTML}</div>
+    </div>`;
+  }
+
+  return `
+    <div class="calendar-wrap">
+      <div class="calendar-head">
+        <div class="calendar-title">${year}년 ${month}월 식단표</div>
+        <div class="legend">
+          <div class="legend-item"><span class="legend-dot" style="background:var(--rank1)"></span>1순위 교환</div>
+          <div class="legend-item"><span class="legend-dot" style="background:var(--rank2)"></span>2순위 교환</div>
+          <div class="legend-item"><span class="legend-dot" style="background:var(--rank3)"></span>3순위 교환</div>
+          <div class="legend-item"><span class="legend-dot" style="background:var(--rank1)"></span><span style="font-size:10px;color:var(--rank1)">빨간 메뉴</span> = 반복</div>
+        </div>
+      </div>
+      <div class="cal-grid">${cells}</div>
+    </div>`;
+}
+
+/* ── 상세 패널 ───────────────────────────────────── */
+function openDetail(idx, cands, school) {
+  const c = cands[idx];
+  const rank = idx + 1;
+  const rankColors = [
+    {col:'var(--rank1)', label:'1순위'},
+    {col:'var(--rank2)', label:'2순위'},
+    {col:'var(--rank3)', label:'3순위'}
+  ];
+  const rc = rankColors[Math.min(idx,2)];
+
+  // 추천 아이템 선택 표시
+  document.querySelectorAll('.reco-item').forEach((el,i) => {
+    el.classList.toggle('selected', i === idx);
+  });
+
+  const hiMenus = c.menus_hi.map(m =>
+    `<li class="${repeated.has(m)?'repeat-menu':''}">${m}${repeated.has(m)?' 🔁':''}</li>`
+  ).join('');
+  const loMenus = c.menus_lo.map(m =>
+    `<li class="${repeated.has(m)?'repeat-menu':''}">${m}${repeated.has(m)?' 🔁':''}</li>`
+  ).join('');
+
+  const panel = document.getElementById('detail-panel');
+  panel.innerHTML = `
+    <div class="detail-head">
+      <h3 style="color:${rc.col}">${rc.label} 교환 추천 상세</h3>
+      <button class="close-btn" onclick="document.getElementById('detail-panel').classList.remove('visible')">✕</button>
+    </div>
+    <div class="detail-body">
+      <div class="detail-col detail-col-hi">
+        <h4>교환 대상 (반복 많음)</h4>
+        <div class="detail-date">${fmtDate(c.date_hi)}</div>
+        <div style="font-size:12px;color:var(--text3);margin-bottom:8px">반복 메뉴 ${c.rep_hi}개 포함</div>
+        <ul class="detail-menu-list">${hiMenus}</ul>
+      </div>
+      <div class="detail-col detail-col-lo">
+        <h4>교환 후보 (반복 적음)</h4>
+        <div class="detail-date">${fmtDate(c.date_lo)}</div>
+        <div style="font-size:12px;color:var(--text3);margin-bottom:8px">반복 메뉴 ${c.rep_lo}개 포함</div>
+        <ul class="detail-menu-list">${loMenus}</ul>
+      </div>
+      <div class="detail-score-row">
+        <div class="score-card">
+          <div class="score-card-val">${c.swap_score.toFixed(4)}</div>
+          <div class="score-card-lbl">swap score</div>
+        </div>
+        <div class="score-card">
+          <div class="score-card-val">${c.menu_diversity.toFixed(3)}</div>
+          <div class="score-card-lbl">메뉴 다양성</div>
+        </div>
+        <div class="score-card">
+          <div class="score-card-val">${c.nutrient_sim.toFixed(3)}</div>
+          <div class="score-card-lbl">영양 유사도</div>
+        </div>
+        <div class="score-card">
+          <div class="score-card-val">${c.day_gap}일</div>
+          <div class="score-card-lbl">날짜 간격</div>
+        </div>
+      </div>
+    </div>`;
+  panel.classList.add('visible');
+  panel.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+}
 </script>
 </body>
 </html>
